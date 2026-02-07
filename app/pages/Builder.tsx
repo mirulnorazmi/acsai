@@ -7,7 +7,9 @@ import {
   Play,
   CheckCircle2,
   Loader2,
-  ArrowRight
+  ArrowRight,
+  FileUp,
+  X
 } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
@@ -20,7 +22,61 @@ import { cn } from '@/lib/utils';
 export default function Builder() {
   const [chatOpen, setChatOpen] = useState(true);
   const [showApproval, setShowApproval] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+
   const { messages, isLoading, currentWorkflow, sendMessage } = useWorkflowChat();
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const pdfFiles = files.filter((file) => file.type === 'application/pdf');
+
+    pdfFiles.forEach((file) => {
+      if (!uploadedFiles.some((f) => f.name === file.name && f.size === file.size)) {
+        setUploadedFiles((prev) => [...prev, file]);
+        setSelectedFiles((prev) => new Set([...prev, file.name]));
+
+        console.log('File uploaded:', file.name);
+        console.log('Total files now:', uploadedFiles.length + 1);
+
+        // Read file as binary and log to console
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const arrayBuffer = event.target?.result as ArrayBuffer;
+          const binaryString = new Uint8Array(arrayBuffer);
+          console.log(`PDF File Uploaded: ${file.name}`);
+          console.log(`File Size: ${file.size} bytes`);
+          //  console.log(`Binary Data:`, binaryString);
+          console.log(`File Object:`, file);
+        };
+        reader.readAsArrayBuffer(file);
+      }
+    });
+
+    // Reset the input so the same file can be uploaded again
+    e.target.value = '';
+  };
+
+  const handleFileToggle = (fileName: string) => {
+    setSelectedFiles((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(fileName)) {
+        newSet.delete(fileName);
+      } else {
+        newSet.add(fileName);
+      }
+      return newSet;
+    });
+  };
+
+  const handleRemoveFile = (fileName: string) => {
+    setUploadedFiles((prev) => prev.filter((f) => f.name !== fileName));
+    setSelectedFiles((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(fileName);
+      return newSet;
+    });
+  };
 
   const handleApprove = () => {
     setShowApproval(false);
@@ -73,6 +129,52 @@ export default function Builder() {
 
         {/* Main Content */}
         <div className="flex-1 flex overflow-hidden">
+          {/* Partition 1: Sources - Left (Only visible when files are uploaded) */}
+          <AnimatePresence>
+            {uploadedFiles.length > 0 && (
+              <motion.div
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: 192, opacity: 1 }}
+                exit={{ width: 0, opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="border-r border-border/50 flex flex-col bg-card/30 w-48 overflow-hidden"
+              >
+                <div className="flex items-center gap-2 p-4 border-b border-border/50">
+                  <FileUp className="w-4 h-4 text-primary" />
+                  <h3 className="text-sm font-semibold text-foreground">Sources</h3>
+                </div>
+
+                <div className="space-y-2 p-3 flex-1 overflow-y-auto">
+                  {uploadedFiles.map((file) => (
+                    <div
+                      key={file.name}
+                      className="flex items-center gap-2 p-2 rounded-lg hover:bg-card/30 transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedFiles.has(file.name)}
+                        onChange={() => handleFileToggle(file.name)}
+                        className="w-4 h-4 cursor-pointer rounded"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-foreground truncate">
+                          {file.name}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveFile(file.name)}
+                        className="h-5 w-5 flex items-center justify-center rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Partition 2: Messages/Chat - Middle */}
           {/* Chat Panel */}
           <AnimatePresence mode="wait">
             {chatOpen && (
@@ -102,6 +204,25 @@ export default function Builder() {
                       </div>
                     </div>
                   )}
+                </div>
+
+                {/* PDF Upload Button */}
+                <div className="border-t border-border/50 p-3">
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    multiple
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    id="pdf-upload"
+                  />
+                  <label
+                    htmlFor="pdf-upload"
+                    className="flex items-center justify-center gap-2 w-full px-3 py-2 border-2 border-dashed border-border/50 rounded cursor-pointer hover:bg-card/50 transition-colors text-center"
+                  >
+                    <FileUp className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Upload PDF</span>
+                  </label>
                 </div>
 
                 {/* Input */}
