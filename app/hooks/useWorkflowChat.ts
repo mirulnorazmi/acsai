@@ -148,20 +148,48 @@ What would you like to build today?`,
         },
       }));
 
+      // Transform n8n connections to React Flow edges
       const newEdges: Edge[] = [];
-      for (let i = 0; i < data.steps.length - 1; i++) {
-        const current = data.steps[i];
-        const next = data.steps[i + 1];
-        newEdges.push({
-          id: `e-${current.id}-${next.id}`,
-          source: current.id,
-          target: next.id,
-          animated: true,
-          markerEnd: {
-            type: MarkerType.ArrowClosed,
-          },
-        });
-      }
+      
+      // workflowConnections format:
+      // {
+      //   "Source Node Name": {
+      //     "main": [
+      //       [
+      //         { "node": "Target Node Name", "type": "main", "index": 0 }
+      //       ]
+      //     ]
+      //   }
+      // }
+      
+      Object.entries(workflowConnections).forEach(([sourceName, outputs]: [string, any]) => {
+        // Find the source node by name
+        const sourceNode = workflowNodes.find(n => n.name === sourceName);
+        if (!sourceNode) return;
+        
+        // Handle main output connections
+        if (outputs.main && Array.isArray(outputs.main)) {
+          outputs.main.forEach((outputGroup: any, outputIndex: number) => {
+            if (Array.isArray(outputGroup)) {
+              outputGroup.forEach((connection: any) => {
+                // Find the target node by name
+                const targetNode = workflowNodes.find(n => n.name === connection.node);
+                if (targetNode) {
+                  newEdges.push({
+                    id: `e-${sourceNode.id}-${targetNode.id}-${outputIndex}`,
+                    source: sourceNode.id,
+                    target: targetNode.id,
+                    animated: true,
+                    markerEnd: {
+                      type: MarkerType.ArrowClosed,
+                    },
+                  });
+                }
+              });
+            }
+          });
+        }
+      });
 
       const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
