@@ -14,7 +14,11 @@ import {
   Send,
   Globe,
   MessageSquare,
-  FileText
+  FileText,
+  Calendar,
+  StickyNote,
+  HardDrive,
+  MousePointerClick
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { NodeType } from '@/types/workflow';
@@ -24,18 +28,22 @@ interface CustomNodeData {
   label: string;
   description?: string; // Optional description
   nodeType?: NodeType; // Legacy support
-  type?: string; // New API type field (e.g., 'http_request', 'slack_invite')
+  type?: string; // n8n node type (e.g., 'n8n-nodes-base.gmail')
+  typeVersion?: number;
   status?: 'idle' | 'running' | 'success' | 'error';
-  parameters?: Record<string, unknown>; // New parameters field
+  parameters?: Record<string, unknown>; // Configuration parameters
   [key: string]: unknown;
 }
 
 // Map API 'type' to internal 'NodeType' for styling
 const mapTypeToStyle = (type: string | undefined): NodeType => {
   if (!type) return 'action';
-  if (type === 'webhook' || type === 'schedule' || type === 'trigger') return 'trigger';
-  if (type === 'condition' || type === 'if') return 'condition';
-  if (type === 'wait' || type === 'delay') return 'delay';
+  const lowerType = type.toLowerCase();
+
+  if (lowerType.includes('webhook') || lowerType.includes('trigger') || lowerType.includes('schedule')) return 'trigger';
+  if (lowerType.includes('if') || lowerType.includes('switch') || lowerType.includes('condition')) return 'condition';
+  if (lowerType.includes('wait') || lowerType.includes('delay') || lowerType.includes('sleep')) return 'delay';
+
   return 'action'; // Default to action for http_request, email_send, etc.
 };
 
@@ -49,31 +57,62 @@ const nodeStyles: Record<NodeType, { bg: string; border: string; icon: typeof Za
 
 // Enhanced icon mapping based on specific node types
 const typeIcons: Record<string, typeof Mail> = {
-  email_send: Mail,
-  email_read: Mail,
-  database_query: Database,
-  users: Users,
-  slack_invite: MessageSquare,
-  slack_message: MessageSquare,
-  http_request: Globe,
-  webhook: Zap,
-  delay: Clock,
-  condition: GitBranch,
-  file_read: FileText,
-  file_write: FileText,
+  // n8n types
+  'n8n-nodes-base.gmail': Mail,
+  'n8n-nodes-base.googledrive': HardDrive,
+  'n8n-nodes-base.googlecalendar': Calendar,
+  'n8n-nodes-base.stickynote': StickyNote,
+  'n8n-nodes-base.webhook': Zap,
+  'n8n-nodes-base.httprequest': Globe,
+  'n8n-nodes-base.postgres': Database,
+  'n8n-nodes-base.slack': MessageSquare,
+  'n8n-nodes-base.discord': MessageSquare,
+  // Generic types
+  'email_send': Mail,
+  'email_read': Mail,
+  'database_query': Database,
+  'users': Users,
+  'slack_invite': MessageSquare,
+  'slack_message': MessageSquare,
+  'http_request': Globe,
+  'webhook': Zap,
+  'delay': Clock,
+  'condition': GitBranch,
+  'file_read': FileText,
+  'file_write': FileText,
+};
+
+// Helper to get icon component case-insensitively
+const getIconForType = (type: string | undefined, defaultIcon: typeof Zap) => {
+  if (!type) return defaultIcon;
+  const lowerType = type.toLowerCase();
+  // Check exact match first
+  if (typeIcons[lowerType]) return typeIcons[lowerType];
+
+  // Check includes for partial matches
+  if (lowerType.includes('gmail') || lowerType.includes('mail')) return Mail;
+  if (lowerType.includes('db') || lowerType.includes('sql') || lowerType.includes('postgres')) return Database;
+  if (lowerType.includes('slack') || lowerType.includes('discord') || lowerType.includes('chat')) return MessageSquare;
+  if (lowerType.includes('file') || lowerType.includes('drive')) return HardDrive;
+  if (lowerType.includes('schedule') || lowerType.includes('calendar')) return Calendar;
+  if (lowerType.includes('note')) return StickyNote;
+  if (lowerType.includes('http') || lowerType.includes('web') || lowerType.includes('api')) return Globe;
+  if (lowerType.includes('click') || lowerType.includes('interaction')) return MousePointerClick;
+
+  return defaultIcon;
 };
 
 export const TriggerNode = memo(({ data, selected }: NodeProps) => {
   const nodeData = data as unknown as CustomNodeData;
   const style = nodeStyles.trigger;
-  const Icon = typeIcons[nodeData.type || ''] || style.icon;
+  const Icon = getIconForType(nodeData.type, style.icon);
 
   return (
     <motion.div
       initial={{ scale: 0.8, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       className={cn(
-        "px-4 py-3 rounded-xl border-2 min-w-[200px] transition-all duration-200",
+        "px-4 py-3 rounded-xl border-2 min-w-[200px] transition-all duration-200 backdrop-blur-md bg-opacity-80",
         style.bg,
         style.border,
         selected && "ring-2 ring-primary ring-offset-2 ring-offset-background"
@@ -86,7 +125,7 @@ export const TriggerNode = memo(({ data, selected }: NodeProps) => {
         <div className="flex-1 min-w-0">
           <p className="font-medium text-sm text-foreground truncate">{nodeData.label}</p>
           <p className="text-xs text-muted-foreground truncate">
-            {nodeData.description || nodeData.type || 'Trigger'}
+            {nodeData.description || nodeData.type?.replace('n8n-nodes-base.', '') || 'Trigger'}
           </p>
         </div>
       </div>
@@ -107,18 +146,18 @@ export const ActionNode = memo(({ data, selected }: NodeProps) => {
   const nodeType = mapTypeToStyle(nodeData.type);
   const style = nodeStyles[nodeType];
 
-  // Clean up label by removing variable syntax like ={{...}} if present in display only
+  // Clean up label and description
   const displayLabel = nodeData.label;
+  const displayDesc = nodeData.description || nodeData.type?.replace('n8n-nodes-base.', '');
 
-  // Select icon based on specific type
-  const IconComponent = typeIcons[nodeData.type || ''] || style.icon;
+  const IconComponent = getIconForType(nodeData.type, style.icon);
 
   return (
     <motion.div
       initial={{ scale: 0.8, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       className={cn(
-        "px-4 py-3 rounded-xl border-2 min-w-[200px] transition-all duration-200",
+        "px-4 py-3 rounded-xl border-2 min-w-[200px] transition-all duration-200 backdrop-blur-md bg-opacity-80",
         style.bg,
         style.border,
         selected && "ring-2 ring-primary ring-offset-2 ring-offset-background",
@@ -146,7 +185,7 @@ export const ActionNode = memo(({ data, selected }: NodeProps) => {
         <div className="flex-1 min-w-0">
           <p className="font-medium text-sm text-foreground truncate">{displayLabel}</p>
           <p className="text-xs text-muted-foreground truncate">
-            {nodeData.description || nodeData.type || 'Action'}
+            {displayDesc}
           </p>
         </div>
       </div>
@@ -171,7 +210,7 @@ export const ConditionNode = memo(({ data, selected }: NodeProps) => {
       initial={{ scale: 0.8, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       className={cn(
-        "px-4 py-3 rounded-xl border-2 min-w-[200px] transition-all duration-200",
+        "px-4 py-3 rounded-xl border-2 min-w-[200px] transition-all duration-200 backdrop-blur-md bg-opacity-80",
         style.bg,
         style.border,
         selected && "ring-2 ring-primary ring-offset-2 ring-offset-background"
@@ -225,7 +264,7 @@ export const DelayNode = memo(({ data, selected }: NodeProps) => {
       initial={{ scale: 0.8, opacity: 0 }}
       animate={{ scale: 1, opacity: 1 }}
       className={cn(
-        "px-4 py-3 rounded-xl border-2 min-w-[200px] transition-all duration-200",
+        "px-4 py-3 rounded-xl border-2 min-w-[200px] transition-all duration-200 backdrop-blur-md bg-opacity-80",
         style.bg,
         style.border,
         selected && "ring-2 ring-primary ring-offset-2 ring-offset-background"
@@ -259,17 +298,15 @@ export const DelayNode = memo(({ data, selected }: NodeProps) => {
 DelayNode.displayName = 'DelayNode';
 
 // Map generic node types to specific implementations
-// We can now use 'default' as a catch-all if we want dynamic styling in one component,
-// but for now keeping them separate allows for unique node structures (like ConditionNode having two outputs).
 export const nodeTypes = {
   trigger: TriggerNode,
   action: ActionNode,
   condition: ConditionNode,
   delay: DelayNode,
-  // Map specific API types to React Flow components
-  webhook: TriggerNode,
-  http_request: ActionNode,
-  slack_invite: ActionNode,
-  email_send: ActionNode,
-  default: ActionNode, // Fallback
+  // n8n types explicit mapping
+  'n8n-nodes-base.webhook': TriggerNode,
+  'n8n-nodes-base.trigger': TriggerNode,
+  'n8n-nodes-base.schedule': TriggerNode,
+  // Fallbacks
+  default: ActionNode,
 };
