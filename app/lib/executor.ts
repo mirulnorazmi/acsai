@@ -1,6 +1,6 @@
 import { supabase } from './supabase';
 import { attemptSelfHealing, isErrorHealable, extractErrorDetails } from './self-healing';
-import type { ExecutionContext, SelfHealingContext } from '@/types/x_execution';
+import type { ExecutionContext, SelfHealingContext } from '@/types/execution';
 import type { WorkflowStep } from '@/types/orchestrator';
 
 /**

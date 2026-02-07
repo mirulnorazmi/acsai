@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, validateSupabaseConfig } from '@/lib/supabase';
 import { executeWorkflow } from '@/lib/executor';
-import { ExecuteWorkflowSchema } from '@/lib/validations/x_execution';
+import { ExecuteWorkflowSchema } from '@/lib/validations/execution';
 import { extractUserId } from '@/lib/auth';
 
 /**

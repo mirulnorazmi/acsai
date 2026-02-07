@@ -8,7 +8,7 @@ import type {
   RegisterToolRequest,
   RegisterToolResponse,
   ListToolsResponse,
-} from '@/types/x_discovery';
+} from '@/types/discovery';
 
 export class DiscoveryClient {
   private baseUrl: string;

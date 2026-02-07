@@ -1,5 +1,5 @@
 import { openai, validateOpenAIConfig } from './ai';
-import type { SelfHealingContext, SelfHealingResult } from '@/types/x_execution';
+import type { SelfHealingContext, SelfHealingResult } from '@/types/execution';
 
 /**
  * Self-Healing AI Service

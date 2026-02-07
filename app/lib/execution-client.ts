@@ -8,7 +8,7 @@ import type {
   ExecuteWorkflowResponse,
   ExecutionStatusResponse,
   HealingEventsResponse,
-} from '@/types/x_execution';
+} from '@/types/execution';
 
 export class ExecutionClient {
   private baseUrl: string;
