@@ -7,7 +7,8 @@
    Play, 
    CheckCircle2,
    Loader2,
-   ArrowRight
+   ArrowRight,
+   Rocket
  } from 'lucide-react';
  import { MainLayout } from '@/components/layout/MainLayout';
  import { Button } from '@/components/ui/button';
@@ -20,11 +21,32 @@
  export default function Builder() {
    const [chatOpen, setChatOpen] = useState(true);
    const [showApproval, setShowApproval] = useState(false);
-   const { messages, isLoading, currentWorkflow, sendMessage } = useWorkflowChat();
+   const [deploymentLoading, setDeploymentLoading] = useState(false);
+   const { messages, isLoading, currentWorkflow, n8nWorkflow, sendMessage } = useWorkflowChat();
  
-   const handleApprove = () => {
-     setShowApproval(false);
-     // Would trigger actual workflow deployment
+   const handleApprove = async () => {
+     if (!n8nWorkflow) return;
+     
+     setDeploymentLoading(true);
+     try {
+       const response = await fetch('/api/orchestrator/deploy-n8n', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ workflow: n8nWorkflow })
+       });
+
+       if (!response.ok) throw new Error('Deployment failed');
+
+       const result = await response.json();
+       setShowApproval(false);
+       // Show success toast or redirect to n8n
+       window.open(result.n8nUrl, '_blank');
+     } catch (error) {
+       console.error('Deployment error:', error);
+       alert('Failed to deploy workflow to n8n');
+     } finally {
+       setDeploymentLoading(false);
+     }
    };
  
    return (
@@ -62,11 +84,11 @@
              </Button>
              <Button 
                className="gap-2"
-               disabled={!currentWorkflow}
+               disabled={!currentWorkflow || !n8nWorkflow}
                onClick={() => setShowApproval(true)}
              >
-               <CheckCircle2 className="w-4 h-4" />
-               Submit for Approval
+               <Rocket className="w-4 h-4" />
+               Deploy to n8n
              </Button>
            </div>
          </div>
@@ -154,28 +176,31 @@
                  onClick={(e) => e.stopPropagation()}
                >
                  <div className="w-16 h-16 rounded-2xl bg-node-success/10 flex items-center justify-center mx-auto mb-6">
-                   <CheckCircle2 className="w-8 h-8 text-node-success" />
+                   <Rocket className="w-8 h-8 text-node-success" />
                  </div>
                  <h2 className="text-2xl font-bold text-foreground text-center mb-2">
-                   Ready to Deploy?
+                   Deploy to n8n?
                  </h2>
                  <p className="text-muted-foreground text-center mb-6">
-                   Your workflow will be submitted for approval before going live. 
-                   A team admin will review and activate it.
+                   Your workflow will be deployed to your n8n instance with Google OAuth credentials 
+                   automatically configured for the required services.
                  </p>
                  <div className="flex gap-3">
                    <Button 
                      variant="outline" 
                      className="flex-1"
                      onClick={() => setShowApproval(false)}
+                     disabled={deploymentLoading}
                    >
                      Cancel
                    </Button>
                    <Button 
                      className="flex-1"
                      onClick={handleApprove}
+                     disabled={deploymentLoading}
                    >
-                     Submit for Approval
+                     {deploymentLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                     {deploymentLoading ? 'Deploying...' : 'Deploy'}
                    </Button>
                  </div>
                </motion.div>
