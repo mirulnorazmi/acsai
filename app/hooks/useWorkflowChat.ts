@@ -1,8 +1,24 @@
 import { useState, useCallback } from 'react';
 import { ChatMessage } from '@/types/workflow';
-import { Node, Edge } from '@xyflow/react';
-import { supabase } from '@/integrations/supabase/client';
+import { Node, Edge, MarkerType } from '@xyflow/react';
 import { toast } from 'sonner';
+
+interface GenerateApiResponse {
+  workflow_id: string
+  name: string
+  steps: Array<{
+    id: string
+    action: string
+    name: string
+    params: Record<string, unknown>
+  }>
+}
+
+type CustomNodeData = {
+  label: string
+  actionType: string
+  status?: "pending" | "success" | "error"
+}
 
 export function useWorkflowChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -36,65 +52,83 @@ What would you like to build today?`,
     setIsLoading(true);
 
     try {
-      // Build conversation history for context
-      const conversationHistory = messages.map(msg => ({
-        role: msg.role as 'user' | 'assistant',
-        content: msg.content,
-      }));
+      // Get token from localStorage
+      const token = localStorage.getItem("auth_token");
 
-      // Add the new user message
-      conversationHistory.push({
-        role: 'user',
-        content,
+      // Use the Next.js API route instead of Supabase Edge Function
+      const response = await fetch('/api/orchestrator/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({ prompt: content }), // Use the latest message as prompt
       });
 
-      const { data, error } = await supabase.functions.invoke('generate-workflow', {
-        body: { messages: conversationHistory },
-      });
-
-      if (error) {
-        throw error;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Error: ${response.statusText}`);
       }
 
-      if (data.error) {
-        if (data.error.includes('Rate limits')) {
-          toast.error('Rate limit exceeded. Please wait a moment and try again.');
-        } else if (data.error.includes('Payment required')) {
-          toast.error('AI credits exhausted. Please add more credits to continue.');
-        } else {
-          toast.error(data.error);
-        }
-        throw new Error(data.error);
+      const data: GenerateApiResponse = await response.json();
+
+      // Transform Response to Nodes & Edges
+      const newNodes: Node<CustomNodeData>[] = data.steps.map((step, index) => ({
+        id: step.id,
+        type: 'default', // Using default for now as per builder page logic
+        position: { x: 250, y: index * 100 + 50 },
+        data: {
+          label: step.name,
+          actionType: step.action,
+          status: 'pending',
+        },
+      }));
+
+      const newEdges: Edge[] = [];
+      for (let i = 0; i < data.steps.length - 1; i++) {
+        const current = data.steps[i];
+        const next = data.steps[i + 1];
+        newEdges.push({
+          id: `e-${current.id}-${next.id}`,
+          source: current.id,
+          target: next.id,
+          animated: true,
+          markerEnd: {
+            type: MarkerType.ArrowClosed,
+          },
+        });
       }
 
       const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: data.message || 'I apologize, but I encountered an issue generating the response. Please try again.',
+        content: `I've generated a workflow for "${data.name}". You can see the visual representation on the canvas.`,
         timestamp: new Date(),
       };
 
       setMessages(prev => [...prev, aiMessage]);
 
-      // Update workflow if one was generated
-      if (data.workflow && data.workflow.nodes && data.workflow.nodes.length > 0) {
-        setCurrentWorkflow(data.workflow);
-        toast.success('Workflow generated! Review it in the canvas.');
+      // Update workflow state
+      if (newNodes.length > 0) {
+        setCurrentWorkflow({ nodes: newNodes, edges: newEdges });
+        toast.success(`Workflow "${data.name}" generated!`);
       }
+
     } catch (error) {
       console.error('Error generating workflow:', error);
       
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'I encountered an error while processing your request. Please try again.',
+        content: error instanceof Error ? error.message : 'I encountered an error while processing your request. Please try again.',
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMessage]);
+      toast.error('Failed to generate workflow');
     } finally {
       setIsLoading(false);
     }
-  }, [messages]);
+  }, []);
 
   const clearWorkflow = useCallback(() => {
     setCurrentWorkflow(null);

@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     validateSupabaseConfig();
 
     // 1. Extract and validate user
-    const userId = extractUserId(request);
+    const userId = await extractUserId(request);
     if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized', message: 'Missing or invalid authorization token' },

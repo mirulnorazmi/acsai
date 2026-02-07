@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     validateOpenAIConfig();
 
     // 1. Extract and validate user
-    const userId = extractUserId(request);
+    const userId = await extractUserId(request);
     if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized', message: 'Missing or invalid authorization token' },
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     if (dbError) {
       console.error('Database error:', dbError);
       return NextResponse.json(
-        { error: 'Database Error', message: 'Failed to save workflow' },
+        { error: 'Database Error', message: 'Failed to save workflow : ' + dbError.message },
         { status: 500 }
       );
     }

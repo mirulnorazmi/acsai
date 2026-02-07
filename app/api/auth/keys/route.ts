@@ -10,7 +10,7 @@ import { extractUserId } from '@/lib/auth';
 export async function POST(request: NextRequest) {
   try {
     // 1. Extract and validate user
-    const userId = extractUserId(request);
+    const userId = await extractUserId(request);
     if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized', message: 'Missing or invalid authorization token' },

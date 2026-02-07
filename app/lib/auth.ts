@@ -1,10 +1,11 @@
 import { NextRequest } from 'next/server';
+import { supabase } from '@/lib/supabase';
 
 /**
  * Extract user ID from Authorization header
- * For production, integrate with Supabase Auth
+ * Verifies JWT with Supabase Auth
  */
-export function extractUserId(request: NextRequest): string | null {
+export async function extractUserId(request: NextRequest): Promise<string | null> {
   const authHeader = request.headers.get('authorization');
   
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -13,17 +14,26 @@ export function extractUserId(request: NextRequest): string | null {
 
   const token = authHeader.substring(7);
   
-  // TODO: Implement proper JWT verification with Supabase Auth
-  // For now, we'll use a mock implementation
-  // In production, use: supabase.auth.getUser(token)
-  
   if (!token) {
     return null;
   }
 
-  // Mock: Extract user ID from token (replace with real JWT verification)
-  // For development, you can use a test UUID
-  return 'mock-user-id-' + token.substring(0, 8);
+  // Verify token with Supabase
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+
+  if (user) {
+    return user.id;
+  }
+
+  // Fallback for development/testing: Return a valid UUID if verification fails
+  // unique-id-uuid-format: 8-4-4-4-12 hex digits
+  if (process.env.NODE_ENV === 'development') {
+    console.warn('Auth verification failed. Using fallback UUID for development.');
+    // A specific UUID that is syntactically valid
+    return '00000000-0000-0000-0000-000000000000';
+  }
+
+  return null;
 }
 
 /**

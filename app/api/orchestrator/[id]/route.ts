@@ -17,7 +17,7 @@ export async function GET(
     const { id } = await params;
     
     // 1. Extract and validate user
-    const userId = extractUserId(request);
+    const userId = await extractUserId(request);
     if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized', message: 'Missing or invalid authorization token' },
@@ -82,7 +82,7 @@ export async function PUT(
     const { id } = await params;
     
     // 1. Extract and validate user
-    const userId = extractUserId(request);
+    const userId = await extractUserId(request);
     if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized', message: 'Missing or invalid authorization token' },
@@ -198,7 +198,7 @@ export async function DELETE(
     const { id } = await params;
     
     // 1. Extract and validate user
-    const userId = extractUserId(request);
+    const userId = await extractUserId(request);
     if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized', message: 'Missing or invalid authorization token' },
