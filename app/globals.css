@@ -110,11 +110,24 @@
     @apply border-l-4;
     border-left-color: hsl(var(--node-error));
   }
+
+  /* Fix for default node white box issue */
+  .react-flow__node-default {
+    @apply bg-card text-card-foreground border-border rounded-xl shadow-card px-4 py-2 border w-[150px] text-center text-sm font-medium;
+  }
+  
+  .react-flow__node-default.selected {
+    @apply ring-2 ring-primary border-primary;
+  }
 }
 
 /* React Flow Custom Styles */
 .react-flow__node {
   cursor: grab;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  width: auto;
 }
 
 .react-flow__node:active {
