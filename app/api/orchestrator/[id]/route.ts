@@ -27,7 +27,7 @@ export async function GET(
 
     // 2. Fetch workflow from database
     const { data: workflow, error: dbError } = await supabase
-      .from('workflows')
+      .from('x_workflows')
       .select('*')
       .eq('id', id)
       .eq('is_deleted', false)
@@ -109,7 +109,7 @@ export async function PUT(
 
     // 3. Fetch existing workflow to check ownership
     const { data: existingWorkflow, error: fetchError } = await supabase
-      .from('workflows')
+      .from('x_workflows')
       .select('user_id, version, is_deleted')
       .eq('id', id)
       .single();
@@ -139,7 +139,7 @@ export async function PUT(
     // 5. Update workflow
     const newVersion = existingWorkflow.version + 1;
     const { data: updatedWorkflow, error: updateError } = await supabase
-      .from('workflows')
+      .from('x_workflows')
       .update({
         steps,
         version: newVersion,
@@ -208,7 +208,7 @@ export async function DELETE(
 
     // 2. Fetch existing workflow to check ownership
     const { data: existingWorkflow, error: fetchError } = await supabase
-      .from('workflows')
+      .from('x_workflows')
       .select('user_id, is_deleted')
       .eq('id', id)
       .single();
@@ -237,7 +237,7 @@ export async function DELETE(
 
     // 4. Soft delete workflow
     const { error: deleteError } = await supabase
-      .from('workflows')
+      .from('x_workflows')
       .update({
         is_deleted: true,
         updated_at: new Date().toISOString(),

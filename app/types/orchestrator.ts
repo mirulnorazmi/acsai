@@ -126,7 +126,7 @@ export interface ErrorResponse {
 
 /**
  * Available Tools
- * List of tools that can be used in workflows
+ * List of tools that can be used in x_workflows
  */
 export const AVAILABLE_TOOLS = [
   'slack_invite',

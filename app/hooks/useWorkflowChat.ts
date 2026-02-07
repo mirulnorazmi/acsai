@@ -9,7 +9,7 @@ export function useWorkflowChat() {
     {
       id: '1',
       role: 'assistant',
-      content: `👋 Hi! I'm your AI workflow assistant powered by Gemini. I can help you create automated workflows from plain English descriptions.
+      content: `👋 Hi! I'm your AI workflow assistant powered by Gemini. I can help you create automated x_workflows from plain English descriptions.
 
 Try describing a business process you'd like to automate, such as:
 • "Automate employee onboarding"
@@ -104,7 +104,7 @@ What would you like to build today?`,
     setMessages([{
       id: '1',
       role: 'assistant',
-      content: `👋 Hi! I'm your AI workflow assistant powered by Gemini. I can help you create automated workflows from plain English descriptions.
+      content: `👋 Hi! I'm your AI workflow assistant powered by Gemini. I can help you create automated x_workflows from plain English descriptions.
 
 Try describing a business process you'd like to automate, such as:
 • "Automate employee onboarding"

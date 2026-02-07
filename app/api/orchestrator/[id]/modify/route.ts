@@ -46,7 +46,7 @@ export async function POST(
 
     // 3. Fetch existing workflow
     const { data: existingWorkflow, error: fetchError } = await supabase
-      .from('workflows')
+      .from('x_workflows')
       .select('*')
       .eq('id', id)
       .eq('is_deleted', false)
@@ -109,7 +109,7 @@ export async function POST(
     // 8. Update workflow in database
     const newVersion = existingWorkflow.version + 1;
     const { data: updatedWorkflow, error: updateError } = await supabase
-      .from('workflows')
+      .from('x_workflows')
       .update({
         name: modifiedWorkflowData.name || existingWorkflow.name,
         description: modifiedWorkflowData.description || existingWorkflow.description,

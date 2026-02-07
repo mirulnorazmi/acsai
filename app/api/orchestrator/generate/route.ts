@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
 
     // 6. Save workflow to database
     const { data: workflow, error: dbError } = await supabase
-      .from('workflows')
+      .from('x_workflows')
       .insert({
         name: generatedWorkflow.name || 'Untitled Workflow',
         description: generatedWorkflow.description || prompt,

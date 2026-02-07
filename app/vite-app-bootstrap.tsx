@@ -35,7 +35,7 @@ export function ViteAppBootstrap() {
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/builder" element={<Builder />} />
-        <Route path="/workflows" element={<Workflows />} />
+        <Route path="/x_workflows" element={<Workflows />} />
         <Route path="/executions" element={<Executions />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="*" element={<NotFound />} />

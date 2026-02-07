@@ -4,7 +4,7 @@ import { Providers } from "./providers";
 
 export const metadata: Metadata = {
   title: "ACSAI - Workflow Automation",
-  description: "Automate your workflows with AI-powered automation",
+  description: "Automate your x_workflows with AI-powered automation",
 };
 
 export default function RootLayout({

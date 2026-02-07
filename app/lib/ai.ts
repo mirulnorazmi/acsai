@@ -95,7 +95,7 @@ Return ONLY the modified JSON workflow with the same structure as the input.`;
 }
 
 /**
- * Generate a diff summary between two workflows
+ * Generate a diff summary between two x_workflows
  */
 export function generateDiff(oldWorkflow: any, newWorkflow: any): string {
   const changes: string[] = [];
