@@ -135,6 +135,8 @@ export interface HealingEventsResponse {
  */
 export interface SelfHealingContext {
   step_id: string;
+  tool_name: string;
+  step_type: string;
   step_config: Record<string, any>;
   error_message: string;
   error_details?: any;

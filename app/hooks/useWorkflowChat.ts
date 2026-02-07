@@ -62,7 +62,47 @@ What would you like to build today?`,
           'Content-Type': 'application/json',
           'Authorization': token ? `Bearer ${token}` : ''
         },
-        body: JSON.stringify({ prompt: content }), // Use the latest message as prompt
+        body: JSON.stringify({ 
+          prompt: content,
+          currentWorkflow: currentWorkflow ? (() => {
+            // Build connections object using Map to avoid TS strict mode issues
+            type ConnectionValue = { main: Array<Array<{ node: string; type: string; index: number }>> };
+            const connectionsMap = new Map<string, ConnectionValue>();
+            
+            currentWorkflow.edges.forEach(edge => {
+              const sourceNode = currentWorkflow.nodes.find(n => n.id === edge.source);
+              const sourceName = String(sourceNode?.data.label || edge.source);
+              if (!connectionsMap.has(sourceName)) {
+                connectionsMap.set(sourceName, { main: [[]] });
+              }
+              const targetNode = currentWorkflow.nodes.find(n => n.id === edge.target);
+              const targetName = String(targetNode?.data.label || edge.target);
+              connectionsMap.get(sourceName)!.main[0].push({
+                node: targetName,
+                type: 'main',
+                index: 0
+              });
+            });
+
+            // Convert Map to plain object
+            const connections: Record<string, ConnectionValue> = {};
+            connectionsMap.forEach((value, key) => {
+              connections[key] = value;
+            });
+
+            return {
+              name: 'Current Workflow',
+              nodes: currentWorkflow.nodes.map(node => ({
+                id: node.id,
+                type: node.data.actionType || node.type,
+                name: node.data.label,
+                parameters: {},
+                position: [node.position.x, node.position.y]
+              })),
+              connections
+            };
+          })() : undefined
+        }),
       });
 
       if (!response.ok) {
@@ -128,7 +168,7 @@ What would you like to build today?`,
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [currentWorkflow]);
 
   const clearWorkflow = useCallback(() => {
     setCurrentWorkflow(null);

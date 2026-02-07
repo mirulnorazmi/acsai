@@ -108,6 +108,8 @@ async function executeStepWithHealing(
       // Prepare self-healing context
       const healingContext: SelfHealingContext = {
         step_id: step.id,
+        tool_name: step.tool || 'unknown',
+        step_type: step.type,
         step_config: step.config || {},
         error_message: errorInfo.message,
         error_details: errorInfo.details,
