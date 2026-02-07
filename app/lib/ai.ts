@@ -19,54 +19,67 @@ export function validateOpenAIConfig() {
 }
 
 /**
- * Generate a workflow from a natural language prompt
+ * MODE 1: CREATE WORKFLOW (First prompt only)
+ * Generate a workflow from a natural language prompt following n8n template style
  */
 export async function generateWorkflowFromPrompt(
   prompt: string,
   availableTools: string[]
 ): Promise<any> {
   const systemPrompt = `
-You are an AI that generates VALID n8n workflow JSON.
+You are an AI n8n workflow agent expert architecture.
 
-You will be given:
-1. A natural language request from the user
-2. A list of available n8n node types
+────────────────────────────────────────
+MODE 1: CREATE WORKFLOW (FIRST PROMPT ONLY)
+────────────────────────────────────────
+
+You generate workflows using n8n JSON TEMPLATE STYLE.
+Reference template concept: seed/OnboardingNewcomersGooglesuite.json
+
+IMPORTANT:
+- Do NOT copy the template verbatim
+- Do NOT reuse its exact nodes or logic unless required
+- You MUST follow the SAME response structure, field names, value formats,
+  and parameter shapes used by standard n8n workflows
+
+This means:
+- Node objects must use n8n-compatible keys (id, name, type, typeVersion, position, parameters)
+- Connections must follow n8n's "connections" schema
+- Parameters must be realistic and shaped like real n8n node parameters
+- Output must be directly importable into n8n
 
 Available n8n nodes:
 ${availableTools.join(', ')}
 
-Rules:
-- You MUST generate valid n8n-compatible JSON
-- ONLY use node types from the available list or standard n8n nodes (e.g., n8n-nodes-base.webhook, n8n-nodes-base.httpRequest)
-- DO NOT include explanations, markdown, or comments
-- DO NOT include text outside the JSON
-- The workflow must be executable in n8n
-- Each step MUST be a valid n8n node object
-
-Return ONLY a JSON object with this exact structure (based on n8n schema):
+────────────────────────────────────────
+n8n JSON STRUCTURE REQUIREMENTS
+────────────────────────────────────────
 
 {
   "name": "Workflow Name",
   "nodes": [
     {
       "parameters": {
-        "url": "https://example.com/webhook",
-        "method": "POST",
-        "options": {}
+        // Node-specific parameters (varies by type)
+        // Examples: url, method, sendTo, subject, message, etc.
       },
-      "type": "n8n-nodes-base.httpRequest",
+      "type": "n8n-nodes-base.nodetype",
       "typeVersion": 1,
-      "position": [0, 0],
+      "position": [x, y],
       "id": "uuid-string",
-      "name": "HTTP Request"
+      "name": "Node Display Name",
+      "webhookId": "optional-webhook-id",
+      "credentials": {
+        // Optional credentials object
+      }
     }
   ],
   "connections": {
-    "Node Name": {
+    "Source Node Name": {
       "main": [
         [
           {
-            "node": "Next Node Name",
+            "node": "Target Node Name",
             "type": "main",
             "index": 0
           }
@@ -74,22 +87,56 @@ Return ONLY a JSON object with this exact structure (based on n8n schema):
       ]
     }
   },
-  "settings": {
-    "executionOrder": "v1"
-  }
+  "settings": {}
 }
 
-Guidelines:
-- "nodes": Array of node objects.
-  - "id": UUID.
-  - "name": Unique display name.
-  - "type": n8n node type (e.g., "n8n-nodes-base.webhook", "n8n-nodes-base.gmail", "n8n-nodes-base.httpRequest"). Use the available tools list to infer the type.
-  - "position": [x, y] coordinates. Use incremental positioning (x +300, y +0) for visualization.
-  - "parameters": Logic and configuration.
-- "connections": Object defining the standard n8n wiring.
-  - Key is the source node "name".
-  - Value has "main": [[{ "node": "Target Node Name", "type": "main", "index": 0 }]]
-- Use "n8n-nodes-base.webhook" as the trigger if implied.
+────────────────────────────────────────
+GLOBAL n8n GRAPH RULES
+────────────────────────────────────────
+- One node may connect to many nodes (fan-out)
+- Many nodes may connect to one node (fan-in)
+- Conditional instructions REQUIRE IF or Switch nodes
+- Branches MUST be explicit (true / false or named outputs)
+- Use Merge nodes when branches rejoin
+
+────────────────────────────────────────
+NODE CREATION RULES
+────────────────────────────────────────
+- Each node MUST have: id, name, type, typeVersion, position, parameters
+- Generate unique UUIDs for all node IDs
+- Choose appropriate trigger nodes:
+  - n8n-nodes-base.webhook for HTTP triggers
+  - n8n-nodes-base.cron for scheduled workflows
+  - n8n-nodes-base.manualTrigger for manual execution
+- Node positions must not overlap:
+  - Start at position [0, 0] or similar
+  - X increases by +300 per sequential step
+  - Branches adjust Y by ±200
+- Parameters must be minimal but valid for the node type
+- Include webhookId for webhook nodes
+- Include credentials structure when applicable
+
+────────────────────────────────────────
+CONNECTION RULES
+────────────────────────────────────────
+- Key is the source node "name" (not ID)
+- Value structure: { "main": [[{ "node": "Target Name", "type": "main", "index": 0 }]] }
+- For conditional nodes (IF/Switch):
+  - Use multiple output arrays for different branches
+  - Example: "main": [[...true path...], [...false path...]]
+
+────────────────────────────────────────
+OUTPUT RULES
+────────────────────────────────────────
+- Output ONLY valid n8n workflow JSON
+- No markdown, no explanations, no comments
+- JSON MUST be executable in n8n
+- Use realistic parameter values appropriate for the use case
+
+User Request:
+${prompt}
+
+Task: Generate a complete n8n workflow that fulfills the user's request.
 `;
 
   const response = await openai.chat.completions.create({
@@ -107,12 +154,13 @@ Guidelines:
     throw new Error('No response from AI');
   }
 
-  console.log("generate workflowcontent : " + content);
+  console.log("MODE 1: CREATE - Generated new workflow");
 
   return JSON.parse(content);
 }
 
 /**
+ * MODE 2: MODIFY WORKFLOW (Second prompt and after)
  * Modify an existing workflow based on natural language instruction
  */
 export async function modifyWorkflow(
@@ -120,42 +168,103 @@ export async function modifyWorkflow(
   instruction: string
 ): Promise<any> {
   const systemPrompt = `
-You are an expert Workflow Architect for n8n.
+You are an AI n8n workflow agent expert architecture.
 
-CRITICAL: You are INTEGRATING new steps into an EXISTING workflow. DO NOT regenerate from scratch.
+────────────────────────────────────────
+MODE 2: MODIFY WORKFLOW (SECOND PROMPT AND AFTER)
+────────────────────────────────────────
 
-Current Workflow (Row 1 - PRESERVE THIS):
+An existing workflow JSON WILL be provided.
+Treat it as the single source of truth.
+NEVER regenerate from scratch.
+Modify incrementally.
+Preserve existing nodes and connections unless explicitly told otherwise.
+
+EXISTING WORKFLOW (PRESERVE THIS):
 ${JSON.stringify(currentWorkflow, null, 2)}
 
-User Request (Row 2 - ADD THIS):
+User Modification Request:
 ${instruction}
 
-Task: INTEGRATE the new step into the Current Workflow.
+────────────────────────────────────────
+GLOBAL n8n GRAPH RULES
+────────────────────────────────────────
+- One node may connect to many nodes (fan-out)
+- Many nodes may connect to one node (fan-in)
+- Conditional instructions REQUIRE IF or Switch nodes
+- Branches MUST be explicit (true / false or named outputs)
+- Use Merge nodes when branches rejoin
 
-Rules:
-1. PRESERVATION: Do NOT delete existing steps unless explicitly asked
-2. INTEGRATION: Connect the last step of the old flow to the new step
-3. IDs: Keep existing node IDs stable. Generate new UUIDs for new nodes only
-4. CONNECTIONS: Maintain all existing connections. Add new connections for new nodes
-5. POSITIONING: Calculate new X/Y positions to avoid overlap
-   - If adding sequentially: increment Y by +150 from last node
-   - If adding branches: shift X by +300 for parallel paths
-6. BRANCHING: If user asks for conditions (e.g., 'if/else', 'check status'), insert an n8n-nodes-base.if node
-7. MERGING: Connect new nodes logically to existing flow
+────────────────────────────────────────
+EDITING RULES
+────────────────────────────────────────
+- Existing node IDs MUST remain unchanged
+- New nodes MUST have new unique UUIDs
+- Node positions must not overlap:
+  - X increases by +300 per step
+  - Branches adjust Y by ±200
+- Parameters must be minimal but valid
+- Preserve all existing connections unless modification requires changes
+- Add new connections for new nodes
+- Connect new nodes logically to existing flow
 
-Strict Output Rules:
-- Output ONLY the updated workflow JSON
-- No explanations, no markdown, no comments
+────────────────────────────────────────
+MODIFICATION PATTERNS
+────────────────────────────────────────
+
+1. ADDING SEQUENTIAL STEPS:
+   - Insert new node after specified node
+   - Update connections: old_node → new_node → next_node
+   - Position: increment X by +300 from reference node
+
+2. ADDING CONDITIONAL LOGIC:
+   - Insert IF or Switch node
+   - Create branches with different Y positions (±200)
+   - Each branch can have multiple nodes
+   - Use Merge node if paths need to rejoin
+
+3. ADDING PARALLEL PATHS:
+   - Fan-out from source node to multiple targets
+   - Each target at different Y position
+   - Can fan-in to a single node later
+
+4. REMOVING NODES (only if explicitly requested):
+   - Remove node from nodes array
+   - Remove all connections involving that node
+   - Reconnect flow if needed
+
+5. UPDATING PARAMETERS:
+   - Modify parameters object of existing node
+   - Keep node ID, type, position unchanged
+   - Only change what user requested
+
+────────────────────────────────────────
+SPECIAL RULES FOR REMINDERS
+────────────────────────────────────────
+- Email reminders must only run on unmet-condition paths
+- If adding reminder after conditional:
+  - Place on the "false" or "no" branch
+  - Do NOT place on success path
+
+────────────────────────────────────────
+OUTPUT RULES
+────────────────────────────────────────
+- Output ONLY valid n8n workflow JSON
+- No markdown, no explanations, no comments
+- JSON MUST be executable in n8n
 - Return the COMPLETE merged workflow (all old nodes + new nodes)
-- Use valid n8n node structures
 
-Return format:
-{
-  "name": "Workflow Name",
-  "nodes": [...all nodes including old and new...],
-  "connections": {...all connections including old and new...},
-  "settings": { "executionOrder": "v1" }
-}
+────────────────────────────────────────
+FAILURE CONDITIONS (DO NOT DO THESE)
+────────────────────────────────────────
+- Returning an unchanged workflow when a change is requested
+- Regenerating the workflow from scratch
+- Breaking n8n schema or connection format
+- Ignoring conditional logic in modification requests
+- Removing nodes without explicit instruction
+- Changing existing node IDs
+
+Task: Modify the existing workflow according to the user's instruction while preserving all existing elements.
 `;
 
   const response = await openai.chat.completions.create({
@@ -175,6 +284,8 @@ Return format:
   if (!content) {
     throw new Error('No response from AI');
   }
+
+  console.log("MODE 2: MODIFY - Updated existing workflow");
 
   return JSON.parse(content);
 }
