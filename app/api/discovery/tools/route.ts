@@ -6,7 +6,7 @@ import { extractUserId } from '@/lib/auth';
 import type { ToolSummary } from '@/types/discovery';
 
 /**
- * GET /api/discovery/tools
+ * GET /api/x_discovery/tools
  * List all registered tools (for UI Sidebar)
  */
 export async function GET(request: NextRequest) {
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
 
     // 1. Fetch all active tools
     const { data: tools, error: fetchError } = await supabase
-      .from('action_library')
+      .from('x_action_library')
       .select('id, name, platform, description')
       .eq('is_active', true)
       .order('name', { ascending: true })
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST /api/discovery/tools
+ * POST /api/x_discovery/tools
  * Register a new tool and generate its vector embedding
  */
 export async function POST(request: NextRequest) {
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
 
     // 5. Insert tool into database
     const { data: tool, error: insertError } = await supabase
-      .from('action_library')
+      .from('x_action_library')
       .insert({
         name,
         platform,

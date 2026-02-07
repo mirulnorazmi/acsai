@@ -8,13 +8,13 @@ import type {
   RegisterToolRequest,
   RegisterToolResponse,
   ListToolsResponse,
-} from '@/types/discovery';
+} from '@/types/x_discovery';
 
 export class DiscoveryClient {
   private baseUrl: string;
   private token: string;
 
-  constructor(baseUrl: string = '/api/discovery', token: string) {
+  constructor(baseUrl: string = '/api/x_discovery', token: string) {
     this.baseUrl = baseUrl;
     this.token = token;
   }
@@ -102,7 +102,7 @@ export class DiscoveryClient {
  * React Hook Example for Discovery
  */
 export function useDiscoveryExample() {
-  const client = new DiscoveryClient('/api/discovery', 'your-auth-token');
+  const client = new DiscoveryClient('/api/x_discovery', 'your-auth-token');
 
   const searchTools = async (query: string) => {
     try {

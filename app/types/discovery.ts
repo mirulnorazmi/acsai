@@ -45,7 +45,7 @@ export interface ToolSummary {
  * API Request/Response Types
  */
 
-// GET /api/discovery/search
+// GET /api/x_discovery/search
 export interface SearchToolsRequest {
   q: string; // Query string
   limit?: number; // Max results (default 5)
@@ -58,7 +58,7 @@ export interface SearchToolsResponse {
   total: number;
 }
 
-// POST /api/discovery/tools
+// POST /api/x_discovery/tools
 export interface RegisterToolRequest {
   name: string;
   platform: string;
@@ -72,7 +72,7 @@ export interface RegisterToolResponse {
   embedding_status: 'generated' | 'pending' | 'failed';
 }
 
-// GET /api/discovery/tools
+// GET /api/x_discovery/tools
 export interface ListToolsResponse {
   tools: ToolSummary[];
   total: number;

@@ -5,7 +5,7 @@ import { SearchToolsSchema } from '@/lib/validations/discovery';
 import type { SearchMatch } from '@/types/discovery';
 
 /**
- * GET /api/discovery/search
+ * GET /api/x_discovery/search
  * Semantic search for tools based on natural language query
  */
 export async function GET(request: NextRequest) {
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 3. Call Supabase RPC function for vector similarity search
-    const { data: matches, error: searchError } = await supabase.rpc('match_actions', {
+    const { data: matches, error: searchError } = await supabase.rpc('x_match_actions', {
       query_embedding: queryEmbedding,
       match_threshold: matchThreshold,
       match_count: matchCount,

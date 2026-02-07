@@ -24,15 +24,15 @@ export async function GET(
       );
     }
 
-    // 2. Verify user has access to this execution
-    const { data: execution, error: executionError } = await supabase
+    // 2. Verify user has access to this x_execution
+    const { data: x_execution, error: executionError } = await supabase
       .from('x_execution_logs')
       .select('id')
       .eq('id', executionId)
       .eq('user_id', userId)
       .single();
 
-    if (executionError || !execution) {
+    if (executionError || !x_execution) {
       return NextResponse.json(
         { error: 'Not Found', message: 'Execution not found' },
         { status: 404 }

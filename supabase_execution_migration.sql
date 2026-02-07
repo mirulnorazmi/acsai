@@ -7,7 +7,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ============================================
 -- EXECUTION LOGS TABLE
 -- ============================================
--- Stores the main execution records for x_workflows
+-- Stores the main x_execution records for x_workflows
 CREATE TABLE IF NOT EXISTS x_execution_logs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   workflow_id UUID NOT NULL REFERENCES x_workflows(id) ON DELETE CASCADE,
@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS x_execution_logs (
 -- ============================================
 -- EXECUTION EVENTS TABLE
 -- ============================================
--- Stores detailed events during execution (including self-healing events)
+-- Stores detailed events during x_execution (including self-healing events)
 CREATE TABLE IF NOT EXISTS execution_events (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   execution_id UUID NOT NULL REFERENCES x_execution_logs(id) ON DELETE CASCADE,
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS execution_events (
 -- ============================================
 -- STEP EXECUTION DETAILS TABLE
 -- ============================================
--- Stores individual step execution results
+-- Stores individual step x_execution results
 CREATE TABLE IF NOT EXISTS step_executions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   execution_id UUID NOT NULL REFERENCES x_execution_logs(id) ON DELETE CASCADE,
@@ -98,23 +98,23 @@ ALTER TABLE execution_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE step_executions ENABLE ROW LEVEL SECURITY;
 
 -- Execution logs policies
-CREATE POLICY "Users can view own execution logs"
+CREATE POLICY "Users can view own x_execution logs"
   ON x_execution_logs
   FOR SELECT
   USING (auth.uid() = user_id);
 
-CREATE POLICY "Users can insert own execution logs"
+CREATE POLICY "Users can insert own x_execution logs"
   ON x_execution_logs
   FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Users can update own execution logs"
+CREATE POLICY "Users can update own x_execution logs"
   ON x_execution_logs
   FOR UPDATE
   USING (auth.uid() = user_id);
 
 -- Execution events policies (read through x_execution_logs)
-CREATE POLICY "Users can view execution events"
+CREATE POLICY "Users can view x_execution events"
   ON execution_events
   FOR SELECT
   USING (
@@ -125,7 +125,7 @@ CREATE POLICY "Users can view execution events"
     )
   );
 
-CREATE POLICY "System can insert execution events"
+CREATE POLICY "System can insert x_execution events"
   ON execution_events
   FOR INSERT
   WITH CHECK (true); -- Allow system to insert events
@@ -166,11 +166,11 @@ CREATE TRIGGER update_execution_logs_updated_at
 -- COMMENTS FOR DOCUMENTATION
 -- ============================================
 
-COMMENT ON TABLE x_execution_logs IS 'Main execution records for workflow runs';
+COMMENT ON TABLE x_execution_logs IS 'Main x_execution records for workflow runs';
 COMMENT ON TABLE execution_events IS 'Detailed event log including self-healing events';
-COMMENT ON TABLE step_executions IS 'Individual step execution results';
+COMMENT ON TABLE step_executions IS 'Individual step x_execution results';
 
-COMMENT ON COLUMN x_execution_logs.status IS 'Current execution status: pending, running, completed, failed, cancelled';
+COMMENT ON COLUMN x_execution_logs.status IS 'Current x_execution status: pending, running, completed, failed, cancelled';
 COMMENT ON COLUMN execution_events.event_type IS 'Type of event: step_started, step_completed, step_failed, self_healing, retry, info, error';
 COMMENT ON COLUMN execution_events.ai_reasoning IS 'AI explanation for self-healing fixes';
 COMMENT ON COLUMN step_executions.was_healed IS 'Flag indicating if this step was auto-fixed by AI';

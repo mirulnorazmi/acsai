@@ -1,6 +1,6 @@
 /**
  * Execution Engine Type Definitions
- * Types for workflow execution, monitoring, and self-healing
+ * Types for workflow x_execution, monitoring, and self-healing
  */
 
 /**
@@ -27,7 +27,7 @@ export type ExecutionEventType =
 
 /**
  * Execution Log
- * Main execution record
+ * Main x_execution record
  */
 export interface ExecutionLog {
   id: string;
@@ -67,7 +67,7 @@ export interface ExecutionEvent {
 
 /**
  * Step Execution
- * Individual step execution record
+ * Individual step x_execution record
  */
 export interface StepExecution {
   id: string;
@@ -154,7 +154,7 @@ export interface SelfHealingResult {
 
 /**
  * Tool Executor Interface
- * Base interface for tool execution
+ * Base interface for tool x_execution
  */
 export interface ToolExecutor {
   name: string;
@@ -163,7 +163,7 @@ export interface ToolExecutor {
 
 /**
  * Execution Context
- * Runtime context passed through execution
+ * Runtime context passed through x_execution
  */
 export interface ExecutionContext {
   execution_id: string;

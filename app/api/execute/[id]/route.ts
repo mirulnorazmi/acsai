@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, validateSupabaseConfig } from '@/lib/supabase';
 import { executeWorkflow } from '@/lib/executor';
-import { ExecuteWorkflowSchema } from '@/lib/validations/execution';
+import { ExecuteWorkflowSchema } from '@/lib/validations/x_execution';
 import { extractUserId } from '@/lib/auth';
 
 /**
  * POST /api/execute/[id]
- * Triggers the execution of a workflow (Async)
+ * Triggers the x_execution of a workflow (Async)
  */
 export async function POST(
   request: NextRequest,
@@ -59,7 +59,7 @@ export async function POST(
       );
     }
 
-    // 4. Create execution log record with status "pending"
+    // 4. Create x_execution log record with status "pending"
     const { data: executionLog, error: executionError } = await supabase
       .from('x_execution_logs')
       .insert({
@@ -73,14 +73,14 @@ export async function POST(
       .single();
 
     if (executionError || !executionLog) {
-      console.error('Failed to create execution log:', executionError);
+      console.error('Failed to create x_execution log:', executionError);
       return NextResponse.json(
-        { error: 'Server Error', message: 'Failed to create execution record' },
+        { error: 'Server Error', message: 'Failed to create x_execution record' },
         { status: 500 }
       );
     }
 
-    // 5. Trigger async execution (Fire-and-Forget)
+    // 5. Trigger async x_execution (Fire-and-Forget)
     // Using setTimeout to simulate background job
     // In production, use Inngest, BullMQ, or similar
     setTimeout(async () => {
@@ -93,11 +93,11 @@ export async function POST(
           input_variables || {}
         );
       } catch (error) {
-        console.error('Background execution error:', error);
+        console.error('Background x_execution error:', error);
       }
     }, 0);
 
-    // 6. Return immediately with execution ID
+    // 6. Return immediately with x_execution ID
     return NextResponse.json(
       {
         execution_id: executionLog.id,
@@ -106,7 +106,7 @@ export async function POST(
       { status: 202 } // 202 Accepted
     );
   } catch (error) {
-    console.error('Error triggering workflow execution:', error);
+    console.error('Error triggering workflow x_execution:', error);
 
     if (error instanceof SyntaxError) {
       return NextResponse.json(
@@ -118,7 +118,7 @@ export async function POST(
     return NextResponse.json(
       {
         error: 'Internal Server Error',
-        message: 'An unexpected error occurred while triggering execution',
+        message: 'An unexpected error occurred while triggering x_execution',
       },
       { status: 500 }
     );

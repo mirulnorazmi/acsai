@@ -1,11 +1,11 @@
 import { supabase } from './supabase';
 import { attemptSelfHealing, isErrorHealable, extractErrorDetails } from './self-healing';
-import type { ExecutionContext, SelfHealingContext } from '@/types/execution';
+import type { ExecutionContext, SelfHealingContext } from '@/types/x_execution';
 import type { WorkflowStep } from '@/types/orchestrator';
 
 /**
  * Workflow Executor Service
- * Handles the execution of workflow steps with self-healing capabilities
+ * Handles the x_execution of workflow steps with self-healing capabilities
  */
 
 const MAX_RETRY_ATTEMPTS = 1; // Retry once with AI fix
@@ -25,7 +25,7 @@ async function executeStep(
     message: `Starting step: ${step.id} (${step.type})`,
   });
 
-  // Create step execution record
+  // Create step x_execution record
   const stepExecutionId = await createStepExecution(
     context.execution_id,
     step,
@@ -33,10 +33,10 @@ async function executeStep(
   );
 
   try {
-    // Simulate step execution based on type
+    // Simulate step x_execution based on type
     const result = await simulateToolExecution(step, context);
 
-    // Update step execution as completed
+    // Update step x_execution as completed
     await updateStepExecution(stepExecutionId, {
       status: 'completed',
       output_data: result,
@@ -65,7 +65,7 @@ async function executeStep(
       metadata: errorInfo.details,
     });
 
-    // Update step execution as failed
+    // Update step x_execution as failed
     await updateStepExecution(stepExecutionId, {
       status: 'failed',
       error_message: errorInfo.message,
@@ -139,7 +139,7 @@ async function executeStepWithHealing(
       // Retry with fixed configuration
       const result = await executeStep(healedStep, context);
 
-      // Mark the step execution as healed
+      // Mark the step x_execution as healed
       const { data: stepExec } = await supabase
         .from('step_executions')
         .select('id')
@@ -195,7 +195,7 @@ export async function executeWorkflow(
   };
 
   try {
-    // Update execution status to running
+    // Update x_execution status to running
     await updateExecutionLog(executionId, {
       status: 'running',
       started_at: new Date().toISOString(),
@@ -222,7 +222,7 @@ export async function executeWorkflow(
       await sleep(500);
     }
 
-    // Mark execution as completed
+    // Mark x_execution as completed
     await updateExecutionLog(executionId, {
       status: 'completed',
       output_result: context.step_outputs,
@@ -231,13 +231,13 @@ export async function executeWorkflow(
 
     await logEvent(executionId, {
       event_type: 'info',
-      message: 'Workflow execution completed successfully',
+      message: 'Workflow x_execution completed successfully',
       metadata: { total_steps: steps.length },
     });
   } catch (error) {
     const errorInfo = extractErrorDetails(error);
 
-    // Mark execution as failed
+    // Mark x_execution as failed
     await updateExecutionLog(executionId, {
       status: 'failed',
       error_message: errorInfo.message,
@@ -246,16 +246,16 @@ export async function executeWorkflow(
 
     await logEvent(executionId, {
       event_type: 'error',
-      message: `Workflow execution failed: ${errorInfo.message}`,
+      message: `Workflow x_execution failed: ${errorInfo.message}`,
       metadata: errorInfo.details,
     });
 
-    console.error('[Executor] Workflow execution failed:', error);
+    console.error('[Executor] Workflow x_execution failed:', error);
   }
 }
 
 /**
- * Simulate tool execution (mock implementation)
+ * Simulate tool x_execution (mock implementation)
  * In production, this would call actual tool integrations
  */
 async function simulateToolExecution(
@@ -265,7 +265,7 @@ async function simulateToolExecution(
   // Simulate network delay
   await sleep(Math.random() * 1000 + 500);
 
-  // Mock tool execution based on tool type
+  // Mock tool x_execution based on tool type
   const tool = step.tool || 'unknown';
   const config = step.config || {};
 
@@ -276,7 +276,7 @@ async function simulateToolExecution(
     throw new Error('404 Channel Not Found: #general-test');
   }
 
-  // Mock successful execution
+  // Mock successful x_execution
   switch (tool) {
     case 'slack_invite':
       return {
@@ -313,7 +313,7 @@ async function simulateToolExecution(
 }
 
 /**
- * Helper: Create step execution record
+ * Helper: Create step x_execution record
  */
 async function createStepExecution(
   executionId: string,
@@ -340,7 +340,7 @@ async function createStepExecution(
 }
 
 /**
- * Helper: Update step execution
+ * Helper: Update step x_execution
  */
 async function updateStepExecution(
   stepExecutionId: string,
@@ -355,7 +355,7 @@ async function updateStepExecution(
 }
 
 /**
- * Helper: Update execution log
+ * Helper: Update x_execution log
  */
 async function updateExecutionLog(
   executionId: string,
@@ -370,7 +370,7 @@ async function updateExecutionLog(
 }
 
 /**
- * Helper: Log execution event
+ * Helper: Log x_execution event
  */
 async function logEvent(
   executionId: string,

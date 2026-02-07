@@ -8,7 +8,7 @@ import type {
   ExecuteWorkflowResponse,
   ExecutionStatusResponse,
   HealingEventsResponse,
-} from '@/types/execution';
+} from '@/types/x_execution';
 
 export class ExecutionClient {
   private baseUrl: string;
@@ -51,7 +51,7 @@ export class ExecutionClient {
   }
 
   /**
-   * Get execution status (for polling)
+   * Get x_execution status (for polling)
    */
   async getExecutionStatus(executionId: string): Promise<ExecutionStatusResponse> {
     const response = await fetch(`${this.baseUrl}/${executionId}/status`, {
@@ -63,14 +63,14 @@ export class ExecutionClient {
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.message || 'Failed to fetch execution status');
+      throw new Error(error.message || 'Failed to fetch x_execution status');
     }
 
     return response.json();
   }
 
   /**
-   * Get self-healing events for an execution
+   * Get self-healing events for an x_execution
    */
   async getHealingEvents(executionId: string): Promise<HealingEventsResponse> {
     const response = await fetch(`${this.baseUrl}/${executionId}/healing-events`, {
@@ -89,8 +89,8 @@ export class ExecutionClient {
   }
 
   /**
-   * Poll execution status until completion
-   * Returns a promise that resolves when execution completes or fails
+   * Poll x_execution status until completion
+   * Returns a promise that resolves when x_execution completes or fails
    */
   async pollUntilComplete(
     executionId: string,
@@ -168,7 +168,7 @@ export function useExecutionExample() {
 
   const executeWorkflow = async (workflowId: string, inputs?: Record<string, any>) => {
     try {
-      // Start execution
+      // Start x_execution
       const { execution_id } = await client.executeWorkflow(workflowId, {
         input_variables: inputs,
       });

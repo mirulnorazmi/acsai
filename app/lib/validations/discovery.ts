@@ -5,7 +5,7 @@ import { z } from 'zod';
  */
 
 /**
- * POST /api/discovery/tools - Register Tool
+ * POST /api/x_discovery/tools - Register Tool
  */
 export const RegisterToolSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100),
@@ -23,7 +23,7 @@ export const RegisterToolSchema = z.object({
 export type RegisterToolInput = z.infer<typeof RegisterToolSchema>;
 
 /**
- * GET /api/discovery/search - Search Query Params
+ * GET /api/x_discovery/search - Search Query Params
  */
 export const SearchToolsSchema = z.object({
   q: z.string().min(1, 'Query is required'),

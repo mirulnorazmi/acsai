@@ -1,5 +1,5 @@
 import { openai, validateOpenAIConfig } from './ai';
-import type { EmbeddingResult } from '@/types/discovery';
+import type { EmbeddingResult } from '@/types/x_discovery';
 
 /**
  * Embedding Service
