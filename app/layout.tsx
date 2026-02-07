@@ -13,7 +13,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" title="test">
       <body className="antialiased">
         <Providers>{children}</Providers>
       </body>
