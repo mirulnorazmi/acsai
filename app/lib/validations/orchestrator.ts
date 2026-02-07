@@ -23,6 +23,7 @@ export type WorkflowStep = z.infer<typeof WorkflowStepSchema>;
 export const GenerateWorkflowSchema = z.object({
   prompt: z.string().min(1, 'Prompt is required'),
   context_override: z.string().optional(),
+  currentWorkflow: z.any().optional(),
 });
 
 export type GenerateWorkflowInput = z.infer<typeof GenerateWorkflowSchema>;

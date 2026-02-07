@@ -37,51 +37,59 @@ ${availableTools.join(', ')}
 
 Rules:
 - You MUST generate valid n8n-compatible JSON
-- ONLY use node types from the available list
+- ONLY use node types from the available list or standard n8n nodes (e.g., n8n-nodes-base.webhook, n8n-nodes-base.httpRequest)
 - DO NOT include explanations, markdown, or comments
 - DO NOT include text outside the JSON
 - The workflow must be executable in n8n
 - Each step MUST be a valid n8n node object
 
-Return ONLY a JSON object with this exact structure:
+Return ONLY a JSON object with this exact structure (based on n8n schema):
 
 {
   "name": "Workflow Name",
-  "description": "Brief description",
-  "steps": [
+  "nodes": [
     {
-      "id": "uuid-or-string",
-      "name": "Node Name",
-      "type": "n8n-node-type",
+      "parameters": {
+        "url": "https://example.com/webhook",
+        "method": "POST",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 1,
       "position": [0, 0],
-      "parameters": {}
-    },
-
-       "nodes": [
-         { id: '1', type: 'trigger', position: { x: 250, y: 50 }, data: { label: 'New Employee Added', description: 'HR System Webhook', nodeType: 'trigger' } },
-         { id: '2', type: 'action', position: { x: 250, y: 180 }, data: { label: 'Create User Account', description: 'Active Directory', nodeType: 'action', icon: 'users' } },
-         { id: '3', type: 'action', position: { x: 250, y: 310 }, data: { label: 'Send Welcome Email', description: 'Email Service', nodeType: 'action', icon: 'email' } },
-         { id: '4', type: 'condition', position: { x: 250, y: 440 }, data: { label: 'Is Manager?', description: 'Check role', nodeType: 'condition' } },
-         { id: '5', type: 'action', position: { x: 100, y: 580 }, data: { label: 'Grant Admin Access', description: 'Permission System', nodeType: 'action' } },
-         { id: '6', type: 'delay', position: { x: 400, y: 580 }, data: { label: 'Wait 3 Days', description: 'Follow-up delay', nodeType: 'delay' } },
-       ] as Node[],
-       "edges": [
-         { id: 'e1-2', source: '1', target: '2', animated: true },
-         { id: 'e2-3', source: '2', target: '3' },
-         { id: 'e3-4', source: '3', target: '4' },
-         { id: 'e4-5', source: '4', target: '5', sourceHandle: 'yes', label: 'Yes' },
-         { id: 'e4-6', source: '4', target: '6', sourceHandle: 'no', label: 'No' },
-       ] as Edge[]
+      "id": "uuid-string",
+      "name": "HTTP Request"
+    }
   ],
-  "connections": {}
+  "connections": {
+    "Node Name": {
+      "main": [
+        [
+          {
+            "node": "Next Node Name",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
 }
 
 Guidelines:
-- Use incremental positioning (x +300, y +0) for each node
-- Generate realistic parameters for each node
-- Connect nodes logically in the "connections" object
-- Use Webhook or Trigger nodes if the workflow needs to start automatically
+- "nodes": Array of node objects.
+  - "id": UUID.
+  - "name": Unique display name.
+  - "type": n8n node type (e.g., "n8n-nodes-base.webhook", "n8n-nodes-base.gmail", "n8n-nodes-base.httpRequest"). Use the available tools list to infer the type.
+  - "position": [x, y] coordinates. Use incremental positioning (x +300, y +0) for visualization.
+  - "parameters": Logic and configuration.
+- "connections": Object defining the standard n8n wiring.
+  - Key is the source node "name".
+  - Value has "main": [[{ "node": "Target Node Name", "type": "main", "index": 0 }]]
+- Use "n8n-nodes-base.webhook" as the trigger if implied.
 `;
 
   const response = await openai.chat.completions.create({
@@ -111,9 +119,44 @@ export async function modifyWorkflow(
   currentWorkflow: any,
   instruction: string
 ): Promise<any> {
-  const systemPrompt = `You are an AI workflow modifier. Given an existing workflow JSON and a modification instruction, return the updated workflow.
+  const systemPrompt = `
+You are an expert Workflow Architect for n8n.
 
-Return ONLY the modified JSON workflow with the same structure as the input.`;
+CRITICAL: You are INTEGRATING new steps into an EXISTING workflow. DO NOT regenerate from scratch.
+
+Current Workflow (Row 1 - PRESERVE THIS):
+${JSON.stringify(currentWorkflow, null, 2)}
+
+User Request (Row 2 - ADD THIS):
+${instruction}
+
+Task: INTEGRATE the new step into the Current Workflow.
+
+Rules:
+1. PRESERVATION: Do NOT delete existing steps unless explicitly asked
+2. INTEGRATION: Connect the last step of the old flow to the new step
+3. IDs: Keep existing node IDs stable. Generate new UUIDs for new nodes only
+4. CONNECTIONS: Maintain all existing connections. Add new connections for new nodes
+5. POSITIONING: Calculate new X/Y positions to avoid overlap
+   - If adding sequentially: increment Y by +150 from last node
+   - If adding branches: shift X by +300 for parallel paths
+6. BRANCHING: If user asks for conditions (e.g., 'if/else', 'check status'), insert an n8n-nodes-base.if node
+7. MERGING: Connect new nodes logically to existing flow
+
+Strict Output Rules:
+- Output ONLY the updated workflow JSON
+- No explanations, no markdown, no comments
+- Return the COMPLETE merged workflow (all old nodes + new nodes)
+- Use valid n8n node structures
+
+Return format:
+{
+  "name": "Workflow Name",
+  "nodes": [...all nodes including old and new...],
+  "connections": {...all connections including old and new...},
+  "settings": { "executionOrder": "v1" }
+}
+`;
 
   const response = await openai.chat.completions.create({
     model: 'gpt-4o-mini',
