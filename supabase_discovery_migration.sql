@@ -10,7 +10,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 -- ACTION LIBRARY TABLE
 -- ============================================
 -- Stores registered tools/actions with vector embeddings for semantic search
-CREATE TABLE IF NOT EXISTS action_library (
+CREATE TABLE IF NOT EXISTS x_action_library (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name TEXT NOT NULL,
   platform TEXT NOT NULL, -- e.g., 'slack', 'email', 'http', 'database'
@@ -29,20 +29,20 @@ CREATE TABLE IF NOT EXISTS action_library (
 
 -- Vector similarity search index (HNSW for fast approximate nearest neighbor)
 CREATE INDEX IF NOT EXISTS idx_action_library_embedding 
-  ON action_library 
+  ON x_action_library 
   USING hnsw (embedding vector_cosine_ops);
 
 -- Regular indexes
-CREATE INDEX IF NOT EXISTS idx_action_library_platform ON action_library(platform);
-CREATE INDEX IF NOT EXISTS idx_action_library_is_active ON action_library(is_active);
-CREATE INDEX IF NOT EXISTS idx_action_library_created_at ON action_library(created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_action_library_name ON action_library(name);
+CREATE INDEX IF NOT EXISTS idx_action_library_platform ON x_action_library(platform);
+CREATE INDEX IF NOT EXISTS idx_action_library_is_active ON x_action_library(is_active);
+CREATE INDEX IF NOT EXISTS idx_action_library_created_at ON x_action_library(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_action_library_name ON x_action_library(name);
 
 -- ============================================
 -- VECTOR SEARCH FUNCTION
 -- ============================================
 -- Function to find similar actions based on embedding similarity
-CREATE OR REPLACE FUNCTION match_actions (
+CREATE OR REPLACE FUNCTION x_match_actions (
   query_embedding vector(1536),
   match_threshold float DEFAULT 0.5,
   match_count int DEFAULT 5
@@ -60,18 +60,18 @@ AS $$
 BEGIN
   RETURN QUERY
   SELECT
-    action_library.id,
-    action_library.name,
-    action_library.platform,
-    action_library.description,
-    action_library.schema,
-    1 - (action_library.embedding <=> query_embedding) as similarity
-  FROM action_library
+    x_action_library.id,
+    x_action_library.name,
+    x_action_library.platform,
+    x_action_library.description,
+    x_action_library.schema,
+    1 - (x_action_library.embedding <=> query_embedding) as similarity
+  FROM x_action_library
   WHERE 
-    action_library.is_active = true
-    AND action_library.embedding IS NOT NULL
-    AND 1 - (action_library.embedding <=> query_embedding) > match_threshold
-  ORDER BY action_library.embedding <=> query_embedding
+    x_action_library.is_active = true
+    AND x_action_library.embedding IS NOT NULL
+    AND 1 - (x_action_library.embedding <=> query_embedding) > match_threshold
+  ORDER BY x_action_library.embedding <=> query_embedding
   LIMIT match_count;
 END;
 $$;
@@ -81,23 +81,23 @@ $$;
 -- ============================================
 
 -- Enable RLS
-ALTER TABLE action_library ENABLE ROW LEVEL SECURITY;
+ALTER TABLE x_action_library ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Everyone can view active tools
 CREATE POLICY "Anyone can view active tools"
-  ON action_library
+  ON x_action_library
   FOR SELECT
   USING (is_active = true);
 
 -- Policy: Only admins can insert (we'll check in API)
 CREATE POLICY "System can insert tools"
-  ON action_library
+  ON x_action_library
   FOR INSERT
   WITH CHECK (true);
 
 -- Policy: Only admins can update (we'll check in API)
 CREATE POLICY "System can update tools"
-  ON action_library
+  ON x_action_library
   FOR UPDATE
   USING (true);
 
@@ -107,7 +107,7 @@ CREATE POLICY "System can update tools"
 
 -- Auto-update updated_at timestamp
 CREATE TRIGGER update_action_library_updated_at
-  BEFORE UPDATE ON action_library
+  BEFORE UPDATE ON x_action_library
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
@@ -116,7 +116,7 @@ CREATE TRIGGER update_action_library_updated_at
 -- ============================================
 
 -- Insert some example tools for testing
-INSERT INTO action_library (name, platform, description, schema, embedding) VALUES
+INSERT INTO x_action_library (name, platform, description, schema, embedding) VALUES
   (
     'slack_send_message',
     'slack',
@@ -158,8 +158,8 @@ ON CONFLICT DO NOTHING;
 -- COMMENTS FOR DOCUMENTATION
 -- ============================================
 
-COMMENT ON TABLE action_library IS 'Registry of available tools/actions with vector embeddings for semantic search';
-COMMENT ON COLUMN action_library.embedding IS 'Vector embedding (1536 dimensions) from OpenAI text-embedding-3-small';
-COMMENT ON COLUMN action_library.schema IS 'JSON Schema defining the tool configuration parameters';
-COMMENT ON COLUMN action_library.platform IS 'Platform/category of the tool (slack, email, http, etc.)';
-COMMENT ON FUNCTION match_actions IS 'Semantic search function using cosine similarity on embeddings';
+COMMENT ON TABLE x_action_library IS 'Registry of available tools/actions with vector embeddings for semantic search';
+COMMENT ON COLUMN x_action_library.embedding IS 'Vector embedding (1536 dimensions) from OpenAI text-embedding-3-small';
+COMMENT ON COLUMN x_action_library.schema IS 'JSON Schema defining the tool configuration parameters';
+COMMENT ON COLUMN x_action_library.platform IS 'Platform/category of the tool (slack, email, http, etc.)';
+COMMENT ON FUNCTION x_match_actions IS 'Semantic search function using cosine similarity on embeddings';
