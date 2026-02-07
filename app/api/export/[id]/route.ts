@@ -62,14 +62,26 @@ export async function POST(
       );
     }
 
-    const steps = workflow.steps as unknown as WorkflowStep[];
+    // Extract the workflow structure
+    // The steps column now contains the complete n8n workflow: { name, nodes, connections, settings }
+    const workflowData = workflow.steps as any;
+    
+    // Handle both old format (array of nodes) and new format (complete workflow object)
+    const steps = Array.isArray(workflowData) 
+      ? workflowData 
+      : (workflowData.nodes || []) as unknown as WorkflowStep[];
 
     // 4. Adapt to target platform
     let jsonContent: Record<string, any>;
 
     try {
       if (target_platform === 'n8n') {
-        jsonContent = convertToN8N(steps);
+        // If we already have the complete n8n format, return it directly
+        if (!Array.isArray(workflowData) && workflowData.nodes) {
+          jsonContent = workflowData; // Already in n8n format
+        } else {
+          jsonContent = convertToN8N(steps);
+        }
       } else if (target_platform === 'zapier') {
         jsonContent = convertToZapier(steps);
       } else {

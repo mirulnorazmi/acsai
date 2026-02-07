@@ -70,22 +70,25 @@ export async function POST(request: NextRequest) {
     }
 
     // 6. Save workflow to database
-    // Note: Storing n8n 'nodes' in the 'steps' column and 'connections' in a metadata field if possible, 
-    // or just simplified mapping for now. The frontend expects 'steps'.
-    const workflowSteps = generatedWorkflow.nodes || generatedWorkflow.steps || [];
-    const workflowConnections = generatedWorkflow.connections || {};
+    // Store the COMPLETE n8n workflow structure in the steps column
+    // This includes: name, nodes, connections, and settings
+    const completeWorkflow = {
+      name: generatedWorkflow.name || 'Untitled Workflow',
+      nodes: generatedWorkflow.nodes || [],
+      connections: generatedWorkflow.connections || {},
+      settings: generatedWorkflow.settings || {}
+    };
 
     const { data: workflow, error: dbError } = await supabase
       .from('x_workflows')
       .insert({
-        name: generatedWorkflow.name || 'Untitled Workflow',
+        name: completeWorkflow.name,
         description: generatedWorkflow.description || prompt,
-        steps: workflowSteps,
+        steps: completeWorkflow, // Store the COMPLETE n8n workflow structure
         status: 'draft',
         version: 1,
         user_id: userId,
         is_deleted: false,
-        // Assuming we might want to store connections later, but for now steps is the main container
       })
       .select()
       .single();
@@ -98,13 +101,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 7. Return success response
+    // 7. Return success response with complete n8n workflow format
     return NextResponse.json(
       {
         workflow_id: workflow.id,
-        name: workflow.name,
-        steps: workflowSteps,
-        connections: workflowConnections
+        name: completeWorkflow.name,
+        steps: completeWorkflow.nodes, // For backward compatibility with frontend
+        connections: completeWorkflow.connections,
+        // Also include the complete workflow structure
+        workflow: completeWorkflow
       },
       { status: 201 }
     );

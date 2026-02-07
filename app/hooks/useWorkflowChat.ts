@@ -11,7 +11,25 @@ interface GenerateApiResponse {
     type: string
     name: string
     parameters: Record<string, unknown>
+    position?: [number, number]
   }>
+  connections?: Record<string, any>
+  // Complete n8n workflow structure
+  workflow?: {
+    name: string
+    nodes: Array<{
+      id: string
+      type: string
+      name: string
+      parameters: Record<string, unknown>
+      position: [number, number]
+      typeVersion?: number
+      webhookId?: string
+      credentials?: Record<string, any>
+    }>
+    connections: Record<string, any>
+    settings: Record<string, any>
+  }
 }
 
 type CustomNodeData = {
@@ -112,11 +130,17 @@ What would you like to build today?`,
 
       const data: GenerateApiResponse = await response.json();
 
+      // Use the complete workflow structure if available, otherwise fall back to steps
+      const workflowNodes = data.workflow?.nodes || data.steps;
+      const workflowConnections = data.workflow?.connections || data.connections || {};
+
       // Transform Response to Nodes & Edges
-      const newNodes: Node<CustomNodeData>[] = data.steps.map((step, index) => ({
+      const newNodes: Node<CustomNodeData>[] = workflowNodes.map((step, index) => ({
         id: step.id,
         type: 'default', // Using default for now as per builder page logic
-        position: { x: 250, y: index * 100 + 50 },
+        position: step.position 
+          ? { x: step.position[0], y: step.position[1] } 
+          : { x: 250, y: index * 100 + 50 },
         data: {
           label: step.name,
           actionType: step.type,
