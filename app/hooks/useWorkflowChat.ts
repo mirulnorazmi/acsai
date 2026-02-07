@@ -8,9 +8,9 @@ interface GenerateApiResponse {
   name: string
   steps: Array<{
     id: string
-    action: string
+    type: string
     name: string
-    params: Record<string, unknown>
+    parameters: Record<string, unknown>
   }>
 }
 
@@ -79,7 +79,7 @@ What would you like to build today?`,
         position: { x: 250, y: index * 100 + 50 },
         data: {
           label: step.name,
-          actionType: step.action,
+          actionType: step.type,
           status: 'pending',
         },
       }));
