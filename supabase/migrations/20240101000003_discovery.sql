@@ -11,7 +11,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 -- ============================================
 -- Stores registered tools/actions with vector embeddings for semantic search
 CREATE TABLE IF NOT EXISTS x_action_library (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   platform TEXT NOT NULL, -- e.g., 'slack', 'email', 'http', 'database'
   description TEXT NOT NULL,

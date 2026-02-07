@@ -112,7 +112,7 @@ export default function Settings() {
                 <div className="space-y-6">
                   {[
                     { label: 'Workflow Failures', description: 'Get notified when a workflow fails' },
-                    { label: 'Approval Requests', description: 'New x_workflows pending your approval' },
+                    { label: 'Approval Requests', description: 'New Workflows pending your approval' },
                     { label: 'Weekly Reports', description: 'Summary of workflow performance' },
                     { label: 'System Updates', description: 'New features and maintenance' },
                   ].map((item) => (

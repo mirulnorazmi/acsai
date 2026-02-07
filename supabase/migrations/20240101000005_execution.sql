@@ -9,7 +9,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- ============================================
 -- Stores the main x_execution records for x_workflows
 CREATE TABLE IF NOT EXISTS x_execution_logs (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   workflow_id UUID NOT NULL REFERENCES x_workflows(id) ON DELETE CASCADE,
   user_id UUID NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'running', 'completed', 'failed', 'cancelled')),
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS x_execution_logs (
 -- ============================================
 -- Stores detailed events during x_execution (including self-healing events)
 CREATE TABLE IF NOT EXISTS execution_events (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   execution_id UUID NOT NULL REFERENCES x_execution_logs(id) ON DELETE CASCADE,
   event_type TEXT NOT NULL CHECK (event_type IN ('step_started', 'step_completed', 'step_failed', 'self_healing', 'retry', 'info', 'error')),
   step_id TEXT,
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS execution_events (
 -- ============================================
 -- Stores individual step x_execution results
 CREATE TABLE IF NOT EXISTS step_executions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   execution_id UUID NOT NULL REFERENCES x_execution_logs(id) ON DELETE CASCADE,
   step_id TEXT NOT NULL,
   step_index INTEGER NOT NULL,

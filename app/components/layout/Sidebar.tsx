@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
   { icon: MessageSquarePlus, label: 'New Workflow', path: '/builder' },
-  { icon: GitBranch, label: 'Workflows', path: '/x_workflows' },
+  { icon: GitBranch, label: 'Workflows', path: '/workflows' },
   { icon: History, label: 'Executions', path: '/executions' },
   { icon: Settings, label: 'Settings', path: '/settings' },
 ];

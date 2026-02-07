@@ -112,7 +112,7 @@ export default function Index() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-foreground">Recent Workflows</h2>
-            <Link to="/x_workflows" className="text-sm text-primary hover:underline flex items-center gap-1">
+            <Link to="/workflows" className="text-sm text-primary hover:underline flex items-center gap-1">
               View all <ArrowRight className="w-4 h-4" />
             </Link>
           </div>

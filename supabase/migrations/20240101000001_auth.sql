@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS x_users (
 -- Note: In a production environment, use Supabase Vault.
 -- For this MVP, we store them here. Supabase manages encryption at rest.
 CREATE TABLE IF NOT EXISTS x_user_secrets (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES x_users(id) ON DELETE CASCADE,
   platform TEXT NOT NULL, -- e.g., 'slack', 'jira', 'openai'
   api_key TEXT NOT NULL, -- The API Key/Token
@@ -32,6 +32,18 @@ CREATE TABLE IF NOT EXISTS x_user_secrets (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(user_id, platform) -- One key per platform per user
 );
+
+-- ============================================
+-- HELPER FUNCTIONS
+-- ============================================
+-- Function to auto-update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
 
 -- ============================================
 -- INDEXES

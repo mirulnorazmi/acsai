@@ -11,7 +11,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 -- ============================================
 -- Stores long-term memory facts about entities (people, projects, etc.)
 CREATE TABLE IF NOT EXISTS x_entity_memory (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL,
   subject TEXT NOT NULL, -- Entity name (e.g., "Sarah Jones", "Project Alpha")
   fact TEXT NOT NULL, -- The actual fact/information
