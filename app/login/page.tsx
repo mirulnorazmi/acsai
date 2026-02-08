@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { LoginSchema, LoginValues } from "@/lib/validations/auth-forms"
+import { supabase } from "@/lib/supabase"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -37,28 +38,21 @@ export default function LoginPage() {
   async function onSubmit(data: LoginValues) {
     setIsLoading(true)
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
+      // Sign in directly with Supabase client to ensure session persistence
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
       })
 
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.message || "Invalid credentials")
+      if (authError) {
+        throw authError
       }
 
-      // Store token
-      const { token, expires_in } = result
-      localStorage.setItem("auth_token", token)
+      if (!authData || !authData.session) {
+        throw new Error('Login failed: no session returned')
+      }
 
-      // Set cookie for middleware
-      // Calculate expiry date if expires_in is provided (seconds), otherwise default to 7 days
-      const maxAge = expires_in || 60 * 60 * 24 * 7
-      document.cookie = `auth_token=${token}; path=/; max-age=${maxAge}; SameSite=Lax; Secure`
+      // supabase-js persists session automatically (localStorage)
 
       toast.success("Successfully logged in!")
       router.push("/")
