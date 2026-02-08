@@ -1,10 +1,38 @@
-import { openai, validateOpenAIConfig } from './ai';
 import type { SelfHealingContext, SelfHealingResult } from '@/types/execution';
+import OpenAI from 'openai';
 
 /**
  * Self-Healing AI Service
  * Uses AI to automatically fix failed workflow steps
  */
+
+
+
+const apiKey = process.env.OPENAI_API_KEY || '';
+
+// Only initialize OpenAI on the server side
+// Client-side code should call API endpoints instead
+const getOpenAIClient = () => {
+  if (!apiKey) {
+    throw new Error('Missing OPENAI_API_KEY');
+  }
+  
+  return new OpenAI({
+    apiKey: apiKey,
+  });
+};
+
+const openai = typeof window === 'undefined' ? getOpenAIClient() : null;
+
+/**
+ * Validate that OpenAI is properly configured
+ * Call this before making API calls
+ */
+export function validateOpenAIConfig() {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('Missing OPENAI_API_KEY environment variable. Please set it in your .env.local file');
+  }
+}
 
 const SELF_HEALING_SYSTEM_PROMPT = `You are a senior workflow automation engineer and debugger specializing in self-healing n8n-style workflow execution. Your single job is to diagnose why a workflow step failed and produce a corrected configuration that will succeed on retry.
 
@@ -142,6 +170,10 @@ export async function attemptSelfHealing(
   context: SelfHealingContext
 ): Promise<SelfHealingResult> {
   validateOpenAIConfig();
+  
+  if (!openai) {
+    throw new Error('OpenAI client not available in this context');
+  }
 
   const userPrompt = `━━━ FAILED STEP ━━━
 Step ID: ${context.step_id}
