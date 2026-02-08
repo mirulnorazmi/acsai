@@ -2,7 +2,6 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2 } from "lucide-react"
 import { useForm } from "react-hook-form"
@@ -24,7 +23,6 @@ import { LoginSchema, LoginValues } from "@/lib/validations/auth-forms"
 import { supabase } from "@/lib/supabase"
 
 export default function LoginPage() {
-  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
 
   const form = useForm<LoginValues>({
@@ -55,8 +53,9 @@ export default function LoginPage() {
       // supabase-js persists session automatically (localStorage)
 
       toast.success("Successfully logged in!")
-      router.push("/")
-      router.refresh() // Refresh to update server components if needed
+      
+      // Use full page reload to ensure React Router picks up the change
+      window.location.href = "/"
 
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Something went wrong")
