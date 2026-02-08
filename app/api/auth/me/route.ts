@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
-import { extractUserId } from '@/lib/auth';
+import { createClient } from '@supabase/supabase-js';
 
 /**
  * GET /api/auth/me
@@ -8,49 +7,94 @@ import { extractUserId } from '@/lib/auth';
  */
 export async function GET(request: NextRequest) {
   try {
-    // 1. Extract and validate user
-    const userId = await extractUserId(request);
-    if (!userId) {
+    // Extract token from Authorization header
+    const authHeader = request.headers.get('authorization');
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.error('No valid authorization header found');
       return NextResponse.json(
-        { error: 'Unauthorized', message: 'Missing or invalid authorization token' },
+        { error: 'Unauthorized', message: 'Missing authorization token' },
         { status: 401 }
       );
     }
 
-    // 2. Fetch user details from x_users
-    // Note: We use the Supabase client associated with current session ideally, but for now we trust `extractUserId` which validates JWT.
-    // However, to read user details, we might need to bypass RLS if not authenticated properly with Supabase client context.
-    // BUT! Since `x_users` has RLS: "auth.uid() = id", we MUST use authenticated client.
+    const token = authHeader.substring(7);
     
-    // Create new Supabase client with auth headers to respect RLS
-    // Wait, `extractUserId` just validates JWT manually or via helper.
-    // To fetch from DB with RLS, we need to set the session or JWT on the client? 
-    // Or we rely on `SUPABASE_SERVICE_ROLE_KEY` (bypass RLS) and manually filter `userId`.
-    // Since this is backend API, using service role key + manual WHERE clause is safer/simpler than passing user JWT context to helper in some cases,
-    // BUT for "Me" endpoint, verifying owner is implicit.
-
-    const { data: userProfile, error: profileError } = await supabase
-      .from('x_users')
-      .select('id, email, full_name, preferences, created_at')
-      .eq('id', userId)
-      .single();
-
-    if (profileError || !userProfile) {
-      // If profile not found but auth valid (weird state potentially), check auth.users?
-      // For MVP, just return 404 or auth info alone if profile missing.
+    if (!token) {
+      console.error('Empty token after Bearer prefix');
       return NextResponse.json(
-        { error: 'Profile Not Found', message: 'User profile does not exist or access denied' },
-        { status: 404 }
+        { error: 'Unauthorized', message: 'Invalid authorization header format' },
+        { status: 401 }
+      );
+    }
+    
+    console.log('Token received, fetching user profile');
+
+    // Create an authenticated Supabase client with the user's token
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('Missing Supabase configuration');
+      return NextResponse.json(
+        { error: 'Internal Server Error', message: 'Supabase not configured' },
+        { status: 500 }
       );
     }
 
-    // 3. Return user details
+    // Create authenticated client with user's token
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    });
+
+    // Get user from Supabase auth
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      console.error('User auth error:', userError);
+      return NextResponse.json(
+        { error: 'Unauthorized', message: 'Invalid or expired token' },
+        { status: 401 }
+      );
+    }
+
+    console.log('User authenticated, user ID:', user.id);
+
+    // Fetch user profile from x_users table
+    const { data: userProfile, error: profileError } = await supabase
+      .from('x_users')
+      .select('id, email, full_name, avatar_url, preferences, created_at, updated_at')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError) {
+      console.error('Profile fetch error:', profileError);
+      // User doesn't have a profile yet, return basic user info with consistent schema
+      const now = new Date().toISOString();
+      return NextResponse.json({
+        id: user.id,
+        email: user.email || '',
+        full_name: user.user_metadata?.full_name || '',
+        avatar_url: user.user_metadata?.avatar_url || '',
+        preferences: {},
+        created_at: user.created_at || now,
+        updated_at: now,
+      });
+    }
+
+    // Return user details with consistent schema
     return NextResponse.json({
       id: userProfile.id,
       email: userProfile.email,
-      full_name: userProfile.full_name,
-      preferences: userProfile.preferences,
+      full_name: userProfile.full_name || '',
+      avatar_url: userProfile.avatar_url || '',
+      preferences: userProfile.preferences || {},
       created_at: userProfile.created_at,
+      updated_at: userProfile.updated_at,
     });
 
   } catch (error) {

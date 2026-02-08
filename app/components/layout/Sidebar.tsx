@@ -1,14 +1,18 @@
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
 import {
   LayoutDashboard,
   MessageSquarePlus,
   GitBranch,
   History,
   Settings,
-  Zap
+  Zap,
+  LogOut,
+  LogIn
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { UserProfile } from '@/types/auth';
 
 const navItems = [
   { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
@@ -20,6 +24,91 @@ const navItems = [
 
 export function Sidebar() {
   const location = useLocation();
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem('auth_token');
+        
+        if (!token) {
+          setLoading(false);
+          return;
+        }
+
+        const response = await fetch('/api/auth/me', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          console.log('Failed to fetch user profile:', response.status);
+          setLoading(false);
+          return;
+        }
+
+        const userData = await response.json();
+        setUser(userData);
+      } catch (err) {
+        console.error('Error fetching user:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+  // Generate initials from full_name or email
+  const getInitials = () => {
+    if (user?.full_name) {
+      return user.full_name
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase();
+    }
+    return user?.email?.[0]?.toUpperCase() || 'U';
+  };
+
+  // Get display name
+  const getDisplayName = () => {
+    return user?.full_name || user?.email || 'User';
+  };
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      const token = localStorage.getItem('auth_token');
+
+      if (token) {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+      }
+
+      // Clear local storage and cookies
+      localStorage.removeItem('auth_token');
+      document.cookie = 'auth_token=; path=/; max-age=0; SameSite=Lax; Secure';
+
+      // Use full page reload to ensure clean state
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Still redirect even on error
+      window.location.href = '/login';
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <aside className="fixed left-0 top-0 h-full w-64 bg-card/95 backdrop-blur-xl border-r border-border/50 z-50">
@@ -74,16 +163,58 @@ export function Sidebar() {
         </nav>
 
         {/* User section */}
-        <div className="p-4 border-t border-border/30">
-          <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-secondary/30">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center ring-2 ring-primary/20">
-              <span className="text-sm font-semibold text-primary">JD</span>
+        <div className="p-4 border-t border-border/30 space-y-3">
+          {loading ? (
+            <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-secondary/30 animate-pulse">
+              <div className="w-9 h-9 rounded-full bg-muted" />
+              <div className="flex-1">
+                <div className="h-3 bg-muted rounded w-2/3 mb-2" />
+                <div className="h-2 bg-muted rounded w-1/2" />
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">John Doe</p>
-              <p className="text-xs text-muted-foreground truncate">john@company.com</p>
+          ) : !user ? (
+            <>
+              <div className="px-4 py-3 rounded-lg bg-secondary/30 text-xs text-muted-foreground text-center">
+                You are not signed in
+              </div>
+              <Link
+                to="/login"
+                className={cn(
+                  "w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                  "bg-primary/10 text-primary hover:bg-primary/20"
+                )}
+              >
+                <LogIn className="w-4 h-4" />
+                Sign In
+              </Link>
+            </>
+          ) : (
+            <div className="flex items-center gap-3 px-4 py-3 rounded-lg bg-secondary/30 transition-colors hover:bg-secondary/50">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center ring-2 ring-primary/20 flex-shrink-0">
+                <span className="text-sm font-semibold text-primary">{getInitials()}</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{getDisplayName()}</p>
+                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+              </div>
             </div>
-          </div>
+          )}
+
+          {user && (
+            <button
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className={cn(
+                "w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                isLoggingOut
+                  ? "opacity-50 cursor-not-allowed bg-secondary/30 text-muted-foreground"
+                  : "bg-secondary/30 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+              )}
+            >
+              <LogOut className="w-4 h-4" />
+              {isLoggingOut ? 'Logging out...' : 'Logout'}
+            </button>
+          )}
         </div>
       </div>
     </aside>

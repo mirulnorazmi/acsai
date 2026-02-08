@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { signIn, useSession } from 'next-auth/react';
+import { UserProfile } from '@/types/auth';
 
 const tabs = [
   { id: 'profile', label: 'Profile', icon: User },
@@ -38,7 +39,52 @@ const integrations = [
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('profile');
   const { data: session, status } = useSession();
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+  const [formData, setFormData] = useState({
+    fullName: '',
+    email: '',
+  });
 
+  // Fetch user profile data
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        setLoadingUser(true);
+        const token = localStorage.getItem('auth_token');
+        
+        if (!token) {
+          setLoadingUser(false);
+          return;
+        }
+
+        const response = await fetch('/api/auth/me', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch user profile');
+        }
+
+        const userData = await response.json();
+        setUser(userData);
+        setFormData({
+          fullName: userData.full_name || '',
+          email: userData.email || '',
+        });
+      } catch (err) {
+        console.error('Error fetching user:', err);
+      } finally {
+        setLoadingUser(false);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+  // Existing session logging
   useEffect(() => {
     if (status === 'authenticated') {
       console.log('=== Current NextAuth Session ===');
@@ -70,6 +116,17 @@ export default function Settings() {
       console.log('Session is still loading...');
     }
   }, [session, status]); // Re-run when session or status changes
+
+  const getInitials = () => {
+    if (formData.fullName) {
+      return formData.fullName
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase();
+    }
+    return formData.email?.[0]?.toUpperCase() || 'U';
+  };
 
 
   if (status === "loading") {
@@ -121,27 +178,51 @@ export default function Settings() {
               >
                 <h2 className="text-xl font-semibold text-foreground mb-6">Profile Settings</h2>
                 <div className="space-y-6">
-                  <div className="flex items-center gap-6">
-                    <div className="w-20 h-20 rounded-2xl bg-primary/20 flex items-center justify-center">
-                      <span className="text-2xl font-bold text-primary">JD</span>
+                  {loadingUser ? (
+                    <div className="animate-pulse">
+                      <div className="w-20 h-20 bg-muted rounded-2xl mb-4" />
+                      <div className="space-y-3">
+                        <div className="h-4 bg-muted rounded w-1/3" />
+                        <div className="h-4 bg-muted rounded w-2/3" />
+                      </div>
                     </div>
-                    <Button variant="outline">Change Avatar</Button>
-                  </div>
-                  <div className="grid gap-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="name">Full Name</Label>
-                      <Input id="name" defaultValue="John Doe" className="bg-secondary/50" />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="email">Email</Label>
-                      <Input id="email" type="email" defaultValue="john@company.com" className="bg-secondary/50" />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="role">Role</Label>
-                      <Input id="role" defaultValue="Operations Manager" className="bg-secondary/50" />
-                    </div>
-                  </div>
-                  <Button>Save Changes</Button>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-6">
+                        <div className="w-20 h-20 rounded-2xl bg-primary/20 flex items-center justify-center flex-shrink-0">
+                          <span className="text-2xl font-bold text-primary">{getInitials()}</span>
+                        </div>
+                        <Button variant="outline">Change Avatar</Button>
+                      </div>
+                      <div className="grid gap-4">
+                        <div className="grid gap-2">
+                          <Label htmlFor="name">Full Name</Label>
+                          <Input
+                            id="name"
+                            value={formData.fullName}
+                            onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                            className="bg-secondary/50"
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="email">Email</Label>
+                          <Input
+                            id="email"
+                            type="email"
+                            value={formData.email}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                            className="bg-secondary/50"
+                            disabled
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="role">Role</Label>
+                          <Input id="role" defaultValue="Operations Manager" className="bg-secondary/50" />
+                        </div>
+                      </div>
+                      <Button>Save Changes</Button>
+                    </>
+                  )}
                 </div>
               </motion.div>
             )}

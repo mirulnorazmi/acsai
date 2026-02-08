@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { Loader2 } from "lucide-react"
 import { useForm } from "react-hook-form"
@@ -14,7 +13,6 @@ import { InputField } from "@/components/ui/input-field"
 import { RegisterSchema, RegisterValues } from "@/lib/validations/auth-forms"
 
 export default function RegisterPage() {
-  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
 
   const form = useForm<RegisterValues>({
@@ -50,11 +48,11 @@ export default function RegisterPage() {
         localStorage.setItem("auth_token", token)
         document.cookie = `auth_token=${token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax; Secure`
         toast.success("Account created successfully!")
-        router.push("/")
-        router.refresh()
+        // Use full page reload to ensure React Router picks up the change
+        window.location.href = "/"
       } else {
         toast.success("Account created! Please login.")
-        router.push("/login")
+        window.location.href = "/login"
       }
 
     } catch (error) {
