@@ -1,10 +1,35 @@
-import { openai, validateOpenAIConfig } from './ai';
 import type { EmbeddingResult } from '@/types/discovery';
+import OpenAI from 'openai';
 
 /**
  * Embedding Service
  * Generates vector embeddings using OpenAI for semantic search
  */
+const apiKey = process.env.OPENAI_API_KEY || '';
+
+// Only initialize OpenAI on the server side
+// Client-side code should call API endpoints instead
+const getOpenAIClient = () => {
+  if (!apiKey) {
+    throw new Error('Missing OPENAI_API_KEY');
+  }
+  
+  return new OpenAI({
+    apiKey: apiKey,
+  });
+};
+
+const openai = typeof window === 'undefined' ? getOpenAIClient() : null;
+
+/**
+ * Validate that OpenAI is properly configured
+ * Call this before making API calls
+ */
+export function validateOpenAIConfig() {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('Missing OPENAI_API_KEY environment variable. Please set it in your .env.local file');
+  }
+}
 
 const EMBEDDING_MODEL = 'text-embedding-3-small';
 const EMBEDDING_DIMENSIONS = 1536;
@@ -17,6 +42,10 @@ export async function generateEmbedding(text: string): Promise<EmbeddingResult> 
 
   if (!text || text.trim().length === 0) {
     throw new Error('Text cannot be empty');
+  }
+
+  if (!openai) {
+    throw new Error('OpenAI client not available in this context');
   }
 
   try {
@@ -67,6 +96,9 @@ export async function generateEmbeddingsBatch(
 
   if (validTexts.length === 0) {
     throw new Error('No valid texts provided');
+  }
+  if (!openai) {
+    throw new Error('OpenAI client not available in this context');
   }
 
   try {
