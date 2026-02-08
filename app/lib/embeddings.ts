@@ -87,6 +87,10 @@ export async function generateEmbeddingsBatch(
 ): Promise<EmbeddingResult[]> {
   validateOpenAIConfig();
 
+  if (!openai) {
+    throw new Error('OpenAI client not available in this context');
+  }
+
   if (!texts || texts.length === 0) {
     throw new Error('Texts array cannot be empty');
   }
@@ -97,9 +101,7 @@ export async function generateEmbeddingsBatch(
   if (validTexts.length === 0) {
     throw new Error('No valid texts provided');
   }
-  if (!openai) {
-    throw new Error('OpenAI client not available in this context');
-  }
+  
 
   try {
     const response = await openai.embeddings.create({
