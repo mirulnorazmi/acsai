@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   User,
@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
+import { signIn, useSession } from 'next-auth/react';
 
 const tabs = [
   { id: 'profile', label: 'Profile', icon: User },
@@ -31,10 +32,53 @@ const integrations = [
   { name: 'Jira', description: 'Project management', connected: false, icon: '📋' },
   { name: 'GitHub', description: 'Repository webhooks', connected: true, icon: '🐙' },
   { name: 'Stripe', description: 'Payment processing', connected: false, icon: '💳' },
+  { name: 'Google Cloud', description: 'Integrate with GCP services including Gmail, Calendar, and more', connected: false, icon: '🌩️' },
 ];
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('profile');
+  const { data: session, status } = useSession();
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      console.log('=== Current NextAuth Session ===');
+      console.log('Full session object:', session);
+      
+      // Specifically check for Google-linked account
+      const googleAccount = session?.accounts?.find((acc: any) => acc.provider === 'google');
+      console.log('Has Google account linked?', !!googleAccount);
+      if (googleAccount) {
+        console.log('Google account details:', googleAccount);
+      } else {
+        console.log('No Google account found in session.accounts');
+      }
+
+      // Fallback check (if using JWT mode without database)
+      console.log('Has Google access token?', !!session?.accessToken);
+      
+      // Quick summary
+      console.log('Summary:', {
+        isAuthenticated: status === 'authenticated',
+        user: session?.user,
+        hasGoogle: !!googleAccount,
+        hasAccessToken: !!session?.accessToken,
+        accountsProviders: session?.accounts?.map((a: any) => a.provider) || 'no accounts array',
+      });
+    } else if (status === 'unauthenticated') {
+      console.log('User is NOT authenticated');
+    } else if (status === 'loading') {
+      console.log('Session is still loading...');
+    }
+  }, [session, status]); // Re-run when session or status changes
+
+
+  if (status === "loading") {
+    return (
+      <MainLayout>
+        <div className="p-8 text-center">Loading session...</div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -128,7 +172,7 @@ export default function Settings() {
               </motion.div>
             )}
 
-            {activeTab === 'integrations' && (
+            {/* {activeTab === 'integrations' && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -163,6 +207,74 @@ export default function Settings() {
                     )}
                   </div>
                 ))}
+              </motion.div>
+            )} */}
+
+            {activeTab === 'integrations' && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-4"
+              >
+                <h2 className="text-xl font-semibold text-foreground mb-2">Connected Services</h2>
+                <p className="text-muted-foreground mb-6">Manage your third-party integrations</p>
+
+                {integrations.map((integration) => {
+                  // For demo: consider Google Cloud connected if user has a Google account linked
+                  // In production → query your DB / session.accounts for provider === 'google'
+                  const isGoogleConnected = integration.name === 'Google Cloud' && session?.user;
+
+                  // You can extend this logic for other providers too
+                  const isConnected = integration.name === 'Google Cloud' 
+                    ? isGoogleConnected 
+                    : integration.connected;
+
+                  return (
+                    <div
+                      key={integration.name}
+                      className="glass rounded-xl p-4 flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center text-2xl">
+                          {integration.icon}
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">{integration.name}</p>
+                          <p className="text-sm text-muted-foreground">{integration.description}</p>
+                        </div>
+                      </div>
+
+                      {isConnected ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-green-600 dark:text-green-400 flex items-center gap-1">
+                            <Check className="w-4 h-4" /> Connected
+                          </span>
+                          <Button variant="outline" size="sm">Configure</Button>
+                          {/* Optional: Add Disconnect button later */}
+                        </div>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            if (integration.name === 'Google Cloud') {
+                              signIn('google', {
+                                // callbackUrl: '/settings?tab=integrations',
+                                callbackUrl: '/settings',
+                                // Optional: force consent screen every time (useful during dev)
+                                // prompt: 'consent',
+                              });
+                            } else {
+                              // For other integrations → you can implement similar flows later
+                              alert(`Connect ${integration.name} coming soon`);
+                            }
+                          }}
+                        >
+                          Connect
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
               </motion.div>
             )}
 

@@ -3,6 +3,31 @@
  * Types for user profiles, secrets, and auth requests
  */
 
+import { type NextAuthOptions } from 'next-auth';
+
+declare module 'next-auth' {
+  interface Session {
+    accessToken?: string;
+    refreshToken?: string;
+    expiresAt?: number;
+    accounts?: Array<{
+      provider: string;
+      providerAccountId: string;
+      access_token?: string;
+      refresh_token?: string;
+      expires_at?: number;
+    }>;
+  }
+}
+
+declare module 'next-auth/jwt' {
+  interface JWT {
+    accessToken?: string;
+    refreshToken?: string;
+    expiresAt?: number;
+  }
+}
+
 /**
  * User Profile
  */

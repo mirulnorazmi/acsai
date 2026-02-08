@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { ChatMessage } from '@/types/workflow';
 import { Node, Edge, MarkerType } from '@xyflow/react';
 import { toast } from 'sonner';
+import { type N8nWorkflow } from '@/lib/n8n-utils';
 
 interface GenerateApiResponse {
   workflow_id: string
@@ -57,6 +58,7 @@ What would you like to build today?`,
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentWorkflow, setCurrentWorkflow] = useState<{ nodes: Node[]; edges: Edge[] } | null>(null);
+  const [n8nWorkflow, setN8nWorkflow] = useState<N8nWorkflow | null>(null);
 
   const sendMessage = useCallback(async (content: string) => {
     const userMessage: ChatMessage = {
@@ -200,6 +202,26 @@ What would you like to build today?`,
 
       setMessages(prev => [...prev, aiMessage]);
 
+      // Generate n8n workflow from the prompt using the API
+      try {
+        const n8nResponse = await fetch('/api/orchestrator/generate-n8n', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: content }),
+        });
+
+        if (n8nResponse.ok) {
+          const { workflow: generatedN8nWorkflow } = await n8nResponse.json();
+          setN8nWorkflow(generatedN8nWorkflow);
+        } else {
+          console.error('Failed to generate n8n workflow');
+        }
+      } catch (n8nError) {
+        console.error('Failed to generate n8n workflow:', n8nError);
+        // Don't fail the entire workflow generation if n8n JSON fails
+        // The visual workflow is still valid
+      }
+
       // Update workflow state
       if (newNodes.length > 0) {
         setCurrentWorkflow({ nodes: newNodes, edges: newEdges });
@@ -248,6 +270,7 @@ What would you like to build today?`,
     messages,
     isLoading,
     currentWorkflow,
+    n8nWorkflow,
     sendMessage,
     setCurrentWorkflow,
     clearWorkflow,
