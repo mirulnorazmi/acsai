@@ -123,8 +123,8 @@ export const TriggerNode = memo(({ data, selected }: NodeProps) => {
           <Icon className="w-4 h-4 text-node-trigger" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm text-foreground truncate">{nodeData.label}</p>
-          <p className="text-xs text-muted-foreground truncate">
+          <p className="font-medium text-sm text-foreground break-words">{nodeData.label}</p>
+          <p className="text-xs text-muted-foreground break-words">
             {nodeData.description || nodeData.type?.replace('n8n-nodes-base.', '') || 'Trigger'}
           </p>
         </div>
@@ -183,8 +183,8 @@ export const ActionNode = memo(({ data, selected }: NodeProps) => {
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm text-foreground truncate">{displayLabel}</p>
-          <p className="text-xs text-muted-foreground truncate">
+          <p className="font-medium text-sm text-foreground break-words">{displayLabel}</p>
+          <p className="text-xs text-muted-foreground break-words">
             {displayDesc}
           </p>
         </div>
@@ -226,8 +226,8 @@ export const ConditionNode = memo(({ data, selected }: NodeProps) => {
           <Icon className="w-4 h-4 text-node-condition" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm text-foreground truncate">{nodeData.label}</p>
-          <p className="text-xs text-muted-foreground truncate">
+          <p className="font-medium text-sm text-foreground break-words">{nodeData.label}</p>
+          <p className="text-xs text-muted-foreground break-words">
             {nodeData.description || 'Condition Check'}
           </p>
         </div>
@@ -280,8 +280,8 @@ export const DelayNode = memo(({ data, selected }: NodeProps) => {
           <Icon className="w-4 h-4 text-node-delay" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm text-foreground truncate">{nodeData.label}</p>
-          <p className="text-xs text-muted-foreground truncate">
+          <p className="font-medium text-sm text-foreground break-words">{nodeData.label}</p>
+          <p className="text-xs text-muted-foreground break-words">
             {nodeData.description || 'Wait Duration'}
           </p>
         </div>
