@@ -247,17 +247,6 @@ SAMPLE NODES:
 
 [
   {
-    "parameters": {},
-    "type": "n8n-nodes-base.manualTrigger",
-    "typeVersion": 1,
-    "position": [
-      96,
-      -208
-    ],
-    "id": "0139d88c-67c8-4543-8a5d-311a8ebf4522",
-    "name": "When clicking ‘Execute workflow’"
-  },
-  {
     "parameters": {
       "sendTo": "={{  $('Webhook').item.json.email }}",
       "subject": "Welcome to NetHR Team!",
@@ -410,10 +399,10 @@ WORKFLOW STRUCTURE:
 }
 
 Node Type Guidelines:
-- Start ALWAYS with: n8n-nodes-base.manualTrigger
+- Start with: n8n-nodes-base.webhook (HTTP triggers)
 - Email: n8n-nodes-base.gmail (requires gmailOAuth2)
 - Google Drive: n8n-nodes-base.googleDrive (requires googleDriveOAuth2Api)
-- Google Calendar: n8n-nodes-base.googleCalendar (requires googleCalendarOAuth2Api) (for now, use the nethr calender ID)
+- Google Calendar: n8n-nodes-base.googleCalendar (requires googleCalendarOAuth2Api)
 - Delays: n8n-nodes-base.wait
 - Conditions: n8n-nodes-base.if
 - Data processing: n8n-nodes-base.set

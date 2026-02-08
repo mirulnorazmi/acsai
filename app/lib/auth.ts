@@ -9,28 +9,19 @@ export async function extractUserId(request: NextRequest): Promise<string | null
   const authHeader = request.headers.get('authorization');
   
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    console.warn('No valid authorization header found');
     return null;
   }
 
   const token = authHeader.substring(7);
   
   if (!token) {
-    console.warn('Empty token extracted from authorization header');
     return null;
   }
 
-  console.log('Verifying token with Supabase...');
-  
   // Verify token with Supabase
   const { data: { user }, error } = await supabase.auth.getUser(token);
 
-  if (error) {
-    console.error('Supabase auth verification error:', error.message);
-  }
-
   if (user) {
-    console.log('Token verified successfully, user ID:', user.id);
     return user.id;
   }
 
@@ -42,7 +33,6 @@ export async function extractUserId(request: NextRequest): Promise<string | null
     return '00000000-0000-0000-0000-000000000000';
   }
 
-  console.warn('Token verification failed and not in development mode');
   return null;
 }
 

@@ -8,8 +8,6 @@ import Workflows from "./pages/Workflows";
 import Executions from "./pages/Executions";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
-import LoginPage from "./login/page";
-import RegisterPage from "./register/page";
 
 /**
  * Temporary bootstrap component that maintains the Vite app's React Router structure.
@@ -40,8 +38,6 @@ export function ViteAppBootstrap() {
         <Route path="/workflows" element={<Workflows />} />
         <Route path="/executions" element={<Executions />} />
         <Route path="/settings" element={<Settings />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
