@@ -1,9 +1,9 @@
 import { motion } from 'framer-motion';
-import { 
-  Plus, 
-  TrendingUp, 
-  Zap, 
-  Clock, 
+import {
+  Plus,
+  TrendingUp,
+  Zap,
+  Clock,
   CheckCircle2,
   ArrowRight
 } from 'lucide-react';
@@ -76,7 +76,7 @@ export default function Index() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-foreground mb-1">Dashboard</h1>
-            <p className="text-muted-foreground">Manage and monitor your automated workflows</p>
+            <p className="text-muted-foreground">Manage and monitor your automated x_workflows</p>
           </div>
           <Link to="/builder">
             <Button className="gap-2">

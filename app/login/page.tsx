@@ -1,0 +1,122 @@
+"use client"
+
+import { useState } from "react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { Loader2 } from "lucide-react"
+import { useForm } from "react-hook-form"
+import { toast } from "sonner"
+import * as z from "zod"
+
+import { AuthCard } from "@/components/ui/auth-card"
+import { Button } from "@/components/ui/button"
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form"
+import { Input } from "@/components/ui/input"
+import { LoginSchema, LoginValues } from "@/lib/validations/auth-forms"
+
+export default function LoginPage() {
+  const router = useRouter()
+  const [isLoading, setIsLoading] = useState(false)
+
+  const form = useForm<LoginValues>({
+    resolver: zodResolver(LoginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  })
+
+  async function onSubmit(data: LoginValues) {
+    setIsLoading(true)
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.message || "Invalid credentials")
+      }
+
+      // Store token
+      const { token, expires_in } = result
+      localStorage.setItem("auth_token", token)
+
+      // Set cookie for middleware
+      // Calculate expiry date if expires_in is provided (seconds), otherwise default to 7 days
+      const maxAge = expires_in || 60 * 60 * 24 * 7
+      document.cookie = `auth_token=${token}; path=/; max-age=${maxAge}; SameSite=Lax; Secure`
+
+      toast.success("Successfully logged in!")
+      router.push("/")
+      router.refresh() // Refresh to update server components if needed
+
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Something went wrong")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div className="flex min-h-screen w-full items-center justify-center bg-background px-4">
+      <AuthCard
+        title="Welcome back"
+        description="Enter your credentials to access your account"
+        footerLink={{
+          text: "Don't have an account?",
+          label: "Register",
+          href: "/register",
+        }}
+      >
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input placeholder="name@example.com" {...field} disabled={isLoading} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input type="password" placeholder="••••••" {...field} disabled={isLoading} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Sign In
+            </Button>
+          </form>
+        </Form>
+      </AuthCard>
+    </div>
+  )
+}

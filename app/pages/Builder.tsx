@@ -7,7 +7,10 @@
    Play, 
    CheckCircle2,
    Loader2,
-   ArrowRight
+   ArrowRight,
+   Rocket,
+   FileUp,
+   X
  } from 'lucide-react';
  import { MainLayout } from '@/components/layout/MainLayout';
  import { Button } from '@/components/ui/button';
@@ -15,16 +18,97 @@
  import { ChatInput } from '@/components/chat/ChatInput';
  import { WorkflowCanvas } from '@/components/workflow/WorkflowCanvas';
  import { useWorkflowChat } from '@/hooks/useWorkflowChat';
+ import { useSession } from 'next-auth/react';
  import { cn } from '@/lib/utils';
  
  export default function Builder() {
-   const [chatOpen, setChatOpen] = useState(true);
-   const [showApproval, setShowApproval] = useState(false);
-   const { messages, isLoading, currentWorkflow, sendMessage } = useWorkflowChat();
- 
-   const handleApprove = () => {
-     setShowApproval(false);
-     // Would trigger actual workflow deployment
+      const [chatOpen, setChatOpen] = useState(true);
+      const [showApproval, setShowApproval] = useState(false);
+      const [deploymentLoading, setDeploymentLoading] = useState(false);
+      const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+      const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
+
+      const { messages, isLoading, currentWorkflow, n8nWorkflow, sendMessage } = useWorkflowChat();
+
+      const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files || []);
+      const pdfFiles = files.filter((file) => file.type === 'application/pdf');
+
+      pdfFiles.forEach((file) => {
+        if (!uploadedFiles.some((f) => f.name === file.name && f.size === file.size)) {
+          setUploadedFiles((prev) => [...prev, file]);
+          setSelectedFiles((prev) => new Set([...prev, file.name]));
+
+          console.log('File uploaded:', file.name);
+          console.log('Total files now:', uploadedFiles.length + 1);
+
+          // Read file as binary and log to console
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const arrayBuffer = event.target?.result as ArrayBuffer;
+            const binaryString = new Uint8Array(arrayBuffer);
+            console.log(`PDF File Uploaded: ${file.name}`);
+            console.log(`File Size: ${file.size} bytes`);
+            //  console.log(`Binary Data:`, binaryString);
+            console.log(`File Object:`, file);
+          };
+          reader.readAsArrayBuffer(file);
+        }
+      });
+
+      // Reset the input so the same file can be uploaded again
+      e.target.value = '';
+    };
+
+    const handleFileToggle = (fileName: string) => {
+      setSelectedFiles((prev) => {
+        const newSet = new Set(prev);
+        if (newSet.has(fileName)) {
+          newSet.delete(fileName);
+        } else {
+          newSet.add(fileName);
+        }
+        return newSet;
+      });
+    };
+
+    const handleRemoveFile = (fileName: string) => {
+    setUploadedFiles((prev) => prev.filter((f) => f.name !== fileName));
+    setSelectedFiles((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(fileName);
+      return newSet;
+    });
+  };
+
+     const { data: session } = useSession();
+
+   const handleApprove = async () => {
+
+     if (!n8nWorkflow) return;
+     
+     setDeploymentLoading(true);
+     try {
+       const response = await fetch('/api/orchestrator/deploy-n8n', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ workflow: n8nWorkflow,
+          googleAccessToken: session?.accessToken,       // ← pass it here
+          googleRefreshToken: session?.refreshToken })
+       });
+
+       if (!response.ok) throw new Error('Deployment failed');
+
+       const result = await response.json();
+       setShowApproval(false);
+       // Show success toast or redirect to n8n
+       window.open(result.n8nUrl, '_blank');
+     } catch (error) {
+       console.error('Deployment error:', error);
+       alert('Failed to deploy workflow to n8n');
+     } finally {
+       setDeploymentLoading(false);
+     }
    };
  
    return (
@@ -62,17 +146,67 @@
              </Button>
              <Button 
                className="gap-2"
-               disabled={!currentWorkflow}
+               disabled={!currentWorkflow || !n8nWorkflow}
                onClick={() => setShowApproval(true)}
              >
-               <CheckCircle2 className="w-4 h-4" />
-               Submit for Approval
+               {/* <CheckCircle2 className="w-4 h-4" />
+               Submit for Approval */}
+
+               <Rocket className="w-4 h-4" />
+               Deploy to n8n
              </Button>
            </div>
          </div>
  
          {/* Main Content */}
          <div className="flex-1 flex overflow-hidden">
+
+          {/* Partition 1: Sources - Left (Only visible when files are uploaded) */}
+          <AnimatePresence>
+            {uploadedFiles.length > 0 && (
+              <motion.div
+                initial={{ width: 0, opacity: 0 }}
+                animate={{ width: 192, opacity: 1 }}
+                exit={{ width: 0, opacity: 0 }}
+                transition={{ duration: 0.3 }}
+                className="border-r border-border/50 flex flex-col bg-card/30 w-48 overflow-hidden"
+              >
+                <div className="flex items-center gap-2 p-4 border-b border-border/50">
+                  <FileUp className="w-4 h-4 text-primary" />
+                  <h3 className="text-sm font-semibold text-foreground">Sources</h3>
+                </div>
+
+                <div className="space-y-2 p-3 flex-1 overflow-y-auto">
+                  {uploadedFiles.map((file) => (
+                    <div
+                      key={file.name}
+                      className="flex items-center gap-2 p-2 rounded-lg hover:bg-card/30 transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedFiles.has(file.name)}
+                        onChange={() => handleFileToggle(file.name)}
+                        className="w-4 h-4 cursor-pointer rounded"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-foreground truncate">
+                          {file.name}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveFile(file.name)}
+                        className="h-5 w-5 flex items-center justify-center rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors flex-shrink-0"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Partition 2: Messages/Chat - Middle */}
            {/* Chat Panel */}
            <AnimatePresence mode="wait">
              {chatOpen && (
@@ -104,6 +238,26 @@
                    )}
                  </div>
                  
+                 {/* PDF Upload Button */}
+                <div className="border-t border-border/50 p-3">
+                  <input
+                    type="file"
+                    accept="application/pdf"
+                    multiple
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    id="pdf-upload"
+                  />
+                  <label
+                    htmlFor="pdf-upload"
+                    className="flex items-center justify-center gap-2 w-full px-3 py-2 border-2 border-dashed border-border/50 rounded cursor-pointer hover:bg-card/50 transition-colors text-center"
+                  >
+                    <FileUp className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">Upload PDF</span>
+                  </label>
+                </div>
+
+
                  {/* Input */}
                  <ChatInput onSend={sendMessage} isLoading={isLoading} />
                </motion.div>
@@ -114,6 +268,7 @@
            <div className="flex-1 p-4">
              {currentWorkflow ? (
                <WorkflowCanvas 
+                 key={currentWorkflow.nodes.map(n => n.id).join('-')}
                  initialNodes={currentWorkflow.nodes} 
                  initialEdges={currentWorkflow.edges} 
                />
@@ -157,10 +312,10 @@
                    <CheckCircle2 className="w-8 h-8 text-node-success" />
                  </div>
                  <h2 className="text-2xl font-bold text-foreground text-center mb-2">
-                   Ready to Deploy?
+                   Ready to Deploy (n8n)?
                  </h2>
                  <p className="text-muted-foreground text-center mb-6">
-                   Your workflow will be submitted for approval before going live. 
+                   Your workflow will be submitted for deployment. 
                    A team admin will review and activate it.
                  </p>
                  <div className="flex gap-3">
@@ -168,14 +323,19 @@
                      variant="outline" 
                      className="flex-1"
                      onClick={() => setShowApproval(false)}
+                     disabled={deploymentLoading}
                    >
                      Cancel
                    </Button>
                    <Button 
                      className="flex-1"
                      onClick={handleApprove}
+                     disabled={deploymentLoading}
                    >
-                     Submit for Approval
+                     {/* Submit for Approval */}
+
+                     {deploymentLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                     {deploymentLoading ? 'Deploying...' : 'Deploy'}
                    </Button>
                  </div>
                </motion.div>

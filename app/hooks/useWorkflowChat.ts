@@ -1,15 +1,50 @@
 import { useState, useCallback } from 'react';
 import { ChatMessage } from '@/types/workflow';
-import { Node, Edge } from '@xyflow/react';
-import { supabase } from '@/integrations/supabase/client';
+import { Node, Edge, MarkerType } from '@xyflow/react';
 import { toast } from 'sonner';
+import { type N8nWorkflow } from '@/lib/n8n-utils';
+
+interface GenerateApiResponse {
+  workflow_id: string
+  name: string
+  steps: Array<{
+    id: string
+    type: string
+    name: string
+    parameters: Record<string, unknown>
+    position?: [number, number]
+  }>
+  connections?: Record<string, any>
+  // Complete n8n workflow structure
+  workflow?: {
+    name: string
+    nodes: Array<{
+      id: string
+      type: string
+      name: string
+      parameters: Record<string, unknown>
+      position: [number, number]
+      typeVersion?: number
+      webhookId?: string
+      credentials?: Record<string, any>
+    }>
+    connections: Record<string, any>
+    settings: Record<string, any>
+  }
+}
+
+type CustomNodeData = {
+  label: string
+  actionType: string
+  status?: "pending" | "success" | "error"
+}
 
 export function useWorkflowChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
       role: 'assistant',
-      content: `👋 Hi! I'm your AI workflow assistant powered by Gemini. I can help you create automated workflows from plain English descriptions.
+      content: `👋 Hi! I'm your AI workflow assistant powered by Gemini. I can help you create automated x_workflows from plain English descriptions.
 
 Try describing a business process you'd like to automate, such as:
 • "Automate employee onboarding"
@@ -23,6 +58,7 @@ What would you like to build today?`,
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [currentWorkflow, setCurrentWorkflow] = useState<{ nodes: Node[]; edges: Edge[] } | null>(null);
+  const [n8nWorkflow, setN8nWorkflow] = useState<N8nWorkflow | null>(null);
 
   const sendMessage = useCallback(async (content: string) => {
     const userMessage: ChatMessage = {
@@ -36,65 +72,177 @@ What would you like to build today?`,
     setIsLoading(true);
 
     try {
-      // Build conversation history for context
-      const conversationHistory = messages.map(msg => ({
-        role: msg.role as 'user' | 'assistant',
-        content: msg.content,
+      // Get token from localStorage
+      const token = localStorage.getItem("auth_token");
+
+      // Use the Next.js API route instead of Supabase Edge Function
+      const response = await fetch('/api/orchestrator/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : ''
+        },
+        body: JSON.stringify({ 
+          prompt: content,
+          currentWorkflow: currentWorkflow ? (() => {
+            // Build connections object using Map to avoid TS strict mode issues
+            type ConnectionValue = { main: Array<Array<{ node: string; type: string; index: number }>> };
+            const connectionsMap = new Map<string, ConnectionValue>();
+            
+            currentWorkflow.edges.forEach(edge => {
+              const sourceNode = currentWorkflow.nodes.find(n => n.id === edge.source);
+              const sourceName = String(sourceNode?.data.label || edge.source);
+              if (!connectionsMap.has(sourceName)) {
+                connectionsMap.set(sourceName, { main: [[]] });
+              }
+              const targetNode = currentWorkflow.nodes.find(n => n.id === edge.target);
+              const targetName = String(targetNode?.data.label || edge.target);
+              connectionsMap.get(sourceName)!.main[0].push({
+                node: targetName,
+                type: 'main',
+                index: 0
+              });
+            });
+
+            // Convert Map to plain object
+            const connections: Record<string, ConnectionValue> = {};
+            connectionsMap.forEach((value, key) => {
+              connections[key] = value;
+            });
+
+            return {
+              name: 'Current Workflow',
+              nodes: currentWorkflow.nodes.map(node => ({
+                id: node.id,
+                type: node.data.actionType || node.type,
+                name: node.data.label,
+                parameters: {},
+                position: [node.position.x, node.position.y]
+              })),
+              connections
+            };
+          })() : undefined
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Error: ${response.statusText}`);
+      }
+
+      const data: GenerateApiResponse = await response.json();
+
+      // Use the complete workflow structure if available, otherwise fall back to steps
+      const workflowNodes = data.workflow?.nodes || data.steps;
+      const workflowConnections = data.workflow?.connections || data.connections || {};
+
+      // Transform Response to Nodes & Edges
+      const newNodes: Node<CustomNodeData>[] = workflowNodes.map((step, index) => ({
+        id: step.id,
+        type: 'default', // Using default for now as per builder page logic
+        position: step.position 
+          ? { x: step.position[0], y: step.position[1] } 
+          : { x: 250, y: index * 100 + 50 },
+        data: {
+          label: step.name,
+          actionType: step.type,
+          status: 'pending',
+        },
       }));
 
-      // Add the new user message
-      conversationHistory.push({
-        role: 'user',
-        content,
-      });
-
-      const { data, error } = await supabase.functions.invoke('generate-workflow', {
-        body: { messages: conversationHistory },
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      if (data.error) {
-        if (data.error.includes('Rate limits')) {
-          toast.error('Rate limit exceeded. Please wait a moment and try again.');
-        } else if (data.error.includes('Payment required')) {
-          toast.error('AI credits exhausted. Please add more credits to continue.');
-        } else {
-          toast.error(data.error);
+      // Transform n8n connections to React Flow edges
+      const newEdges: Edge[] = [];
+      
+      // workflowConnections format:
+      // {
+      //   "Source Node Name": {
+      //     "main": [
+      //       [
+      //         { "node": "Target Node Name", "type": "main", "index": 0 }
+      //       ]
+      //     ]
+      //   }
+      // }
+      
+      Object.entries(workflowConnections).forEach(([sourceName, outputs]: [string, any]) => {
+        // Find the source node by name
+        const sourceNode = workflowNodes.find(n => n.name === sourceName);
+        if (!sourceNode) return;
+        
+        // Handle main output connections
+        if (outputs.main && Array.isArray(outputs.main)) {
+          outputs.main.forEach((outputGroup: any, outputIndex: number) => {
+            if (Array.isArray(outputGroup)) {
+              outputGroup.forEach((connection: any) => {
+                // Find the target node by name
+                const targetNode = workflowNodes.find(n => n.name === connection.node);
+                if (targetNode) {
+                  newEdges.push({
+                    id: `e-${sourceNode.id}-${targetNode.id}-${outputIndex}`,
+                    source: sourceNode.id,
+                    target: targetNode.id,
+                    animated: true,
+                    markerEnd: {
+                      type: MarkerType.ArrowClosed,
+                    },
+                  });
+                }
+              });
+            }
+          });
         }
-        throw new Error(data.error);
-      }
+      });
 
       const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: data.message || 'I apologize, but I encountered an issue generating the response. Please try again.',
+        content: `I've generated a workflow for "${data.name}". You can see the visual representation on the canvas.`,
         timestamp: new Date(),
       };
 
       setMessages(prev => [...prev, aiMessage]);
 
-      // Update workflow if one was generated
-      if (data.workflow && data.workflow.nodes && data.workflow.nodes.length > 0) {
-        setCurrentWorkflow(data.workflow);
-        toast.success('Workflow generated! Review it in the canvas.');
+      // Generate n8n workflow from the prompt using the API
+      try {
+        const n8nResponse = await fetch('/api/orchestrator/generate-n8n', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: content }),
+        });
+
+        if (n8nResponse.ok) {
+          const { workflow: generatedN8nWorkflow } = await n8nResponse.json();
+          setN8nWorkflow(generatedN8nWorkflow);
+        } else {
+          console.error('Failed to generate n8n workflow');
+        }
+      } catch (n8nError) {
+        console.error('Failed to generate n8n workflow:', n8nError);
+        // Don't fail the entire workflow generation if n8n JSON fails
+        // The visual workflow is still valid
       }
+
+      // Update workflow state
+      if (newNodes.length > 0) {
+        setCurrentWorkflow({ nodes: newNodes, edges: newEdges });
+        toast.success(`Workflow "${data.name}" generated!`);
+      }
+
     } catch (error) {
       console.error('Error generating workflow:', error);
       
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: 'I encountered an error while processing your request. Please try again.',
+        content: error instanceof Error ? error.message : 'I encountered an error while processing your request. Please try again.',
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, errorMessage]);
+      toast.error('Failed to generate workflow');
     } finally {
       setIsLoading(false);
     }
-  }, [messages]);
+  }, [currentWorkflow]);
 
   const clearWorkflow = useCallback(() => {
     setCurrentWorkflow(null);
@@ -104,7 +252,7 @@ What would you like to build today?`,
     setMessages([{
       id: '1',
       role: 'assistant',
-      content: `👋 Hi! I'm your AI workflow assistant powered by Gemini. I can help you create automated workflows from plain English descriptions.
+      content: `👋 Hi! I'm your AI workflow assistant powered by Gemini. I can help you create automated x_workflows from plain English descriptions.
 
 Try describing a business process you'd like to automate, such as:
 • "Automate employee onboarding"
@@ -122,6 +270,7 @@ What would you like to build today?`,
     messages,
     isLoading,
     currentWorkflow,
+    n8nWorkflow,
     sendMessage,
     setCurrentWorkflow,
     clearWorkflow,
