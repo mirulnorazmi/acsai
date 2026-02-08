@@ -75,16 +75,50 @@ export default function Builder() {
             });
           }
         } else if (stepsData?.nodes && Array.isArray(stepsData.nodes)) {
-          nodes = stepsData.nodes
-            .filter((n: any) => n != null)
-            .map((node: any, i: number) => ({
+          const rawNodes = stepsData.nodes.filter((n: any) => n != null);
+          nodes = rawNodes.map((node: any, i: number) => ({
               id: node.id || `node-${i}`,
               type: 'default',
               position: node.position ? { x: node.position[0] ?? node.position.x ?? 250, y: node.position[1] ?? node.position.y ?? i * 100 + 50 } : { x: 250, y: i * 100 + 50 },
               data: { label: node.name || node.label || 'Step', actionType: node.type || 'action', status: 'pending' as const },
             }));
-          if (Array.isArray(stepsData.edges)) {
-            edges = stepsData.edges.filter((e: any) => e != null);
+
+          // Parse n8n connections format into React Flow edges
+          const connections = stepsData.connections || {};
+          Object.entries(connections).forEach(([sourceName, outputs]: [string, any]) => {
+            const sourceNode = rawNodes.find((n: any) => n.name === sourceName);
+            if (!sourceNode) return;
+            if (outputs.main && Array.isArray(outputs.main)) {
+              outputs.main.forEach((outputGroup: any, outputIndex: number) => {
+                if (Array.isArray(outputGroup)) {
+                  outputGroup.forEach((conn: any) => {
+                    const targetNode = rawNodes.find((n: any) => n.name === conn.node);
+                    if (targetNode) {
+                      edges.push({
+                        id: `e-${sourceNode.id}-${targetNode.id}-${outputIndex}`,
+                        source: sourceNode.id,
+                        target: targetNode.id,
+                        animated: true,
+                        markerEnd: { type: MarkerType.ArrowClosed },
+                      });
+                    }
+                  });
+                }
+              });
+            }
+          });
+
+          // Fallback: if no connections found, create sequential edges
+          if (edges.length === 0 && nodes.length > 1) {
+            for (let i = 0; i < nodes.length - 1; i++) {
+              edges.push({
+                id: `e-${nodes[i].id}-${nodes[i + 1].id}`,
+                source: nodes[i].id,
+                target: nodes[i + 1].id,
+                animated: true,
+                markerEnd: { type: MarkerType.ArrowClosed },
+              });
+            }
           }
         }
 

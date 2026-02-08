@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Search, Filter } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,9 +18,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
-// Fetch gold-standard workflows for the signed-in user
+// Fetch all workflows for the signed-in user
 
 export default function Workflows() {
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
@@ -41,8 +42,6 @@ export default function Workflows() {
           .from('x_workflows')
           .select('*')
           .eq('user_id', user.id)
-          .eq('is_gold_standard', true)
-          .eq('is_deleted', false)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -84,7 +83,7 @@ export default function Workflows() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-foreground mb-1">Workflows</h1>
-            <p className="text-muted-foreground">Manage all your automated x_workflows</p>
+            <p className="text-muted-foreground">Manage all your automated workflows</p>
           </div>
           <Link to="/builder">
             <Button className="gap-2">
@@ -99,7 +98,7 @@ export default function Workflows() {
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search x_workflows..."
+              placeholder="Search workflows..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-10 bg-card/50"
@@ -134,14 +133,17 @@ export default function Workflows() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <WorkflowCard workflow={workflow} />
+                  <WorkflowCard
+                    workflow={workflow}
+                    onEdit={() => navigate(`/builder?id=${workflow.id}`)}
+                  />
                 </motion.div>
               ))}
         </div>
 
         {filteredWorkflows.length === 0 && (
           <div className="text-center py-16">
-            <p className="text-muted-foreground">No x_workflows found matching your criteria.</p>
+            <p className="text-muted-foreground">No workflows found matching your criteria.</p>
           </div>
         )}
       </div>
