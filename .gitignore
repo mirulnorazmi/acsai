@@ -43,3 +43,8 @@ next-env.d.ts
 # markdown
 *.md
 README.md
+
+#environment
+.env
+.env.local
+
