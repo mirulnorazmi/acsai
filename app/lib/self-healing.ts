@@ -1,11 +1,11 @@
-import { validateOpenAIConfig } from './ai';
-import OpenAI from 'openai';
 import type { SelfHealingContext, SelfHealingResult } from '@/types/execution';
+import OpenAI from 'openai';
 
 /**
  * Self-Healing AI Service
  * Uses AI to automatically fix failed workflow steps
  */
+
 
 
 const apiKey = process.env.OPENAI_API_KEY || '';
@@ -21,7 +21,18 @@ const getOpenAIClient = () => {
     apiKey: apiKey,
   });
 };
+
 const openai = typeof window === 'undefined' ? getOpenAIClient() : null;
+
+/**
+ * Validate that OpenAI is properly configured
+ * Call this before making API calls
+ */
+export function validateOpenAIConfig() {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('Missing OPENAI_API_KEY environment variable. Please set it in your .env.local file');
+  }
+}
 
 const SELF_HEALING_SYSTEM_PROMPT = `You are a senior workflow automation engineer and debugger specializing in self-healing n8n-style workflow execution. Your single job is to diagnose why a workflow step failed and produce a corrected configuration that will succeed on retry.
 
@@ -160,7 +171,7 @@ export async function attemptSelfHealing(
 ): Promise<SelfHealingResult> {
   validateOpenAIConfig();
   
-if (!openai) {
+  if (!openai) {
     throw new Error('OpenAI client not available in this context');
   }
 
