@@ -38,6 +38,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('Received deploy request:', {
+      workflowName: workflow.name,
+      nodeCount: workflow.nodes?.length,
+      hasGoogleAccessToken: !!googleAccessToken,
+      hasGoogleRefreshToken: !!googleRefreshToken,
+      // Do NOT log full tokens in production!
+    });
+
     // Step 1: Create Google credentials if tokens are provided
     let googleCredentialId: string | null = null;
     if (googleAccessToken && googleRefreshToken) {
@@ -56,8 +64,12 @@ export async function POST(request: NextRequest) {
               data: {
                 clientId: process.env.GOOGLE_CLIENT_ID,
                 clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-                accessToken: googleAccessToken,
-                refreshToken: googleRefreshToken,
+                // accessToken: googleAccessToken,
+                // refreshToken: googleRefreshToken,
+                scope: "https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.readonly",
+                sendAdditionalBodyProperties: false,
+                additionalBodyProperties: {},
+                serverUrl: "https://oauth2.googleapis.com"
               },
             }),
           }

@@ -16,6 +16,7 @@
  import { ChatInput } from '@/components/chat/ChatInput';
  import { WorkflowCanvas } from '@/components/workflow/WorkflowCanvas';
  import { useWorkflowChat } from '@/hooks/useWorkflowChat';
+ import { useSession } from 'next-auth/react';
  import { cn } from '@/lib/utils';
  
  export default function Builder() {
@@ -24,6 +25,8 @@
    const [deploymentLoading, setDeploymentLoading] = useState(false);
    const { messages, isLoading, currentWorkflow, n8nWorkflow, sendMessage } = useWorkflowChat();
  
+   const { data: session } = useSession();
+
    const handleApprove = async () => {
      if (!n8nWorkflow) return;
      
@@ -32,7 +35,9 @@
        const response = await fetch('/api/orchestrator/deploy-n8n', {
          method: 'POST',
          headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({ workflow: n8nWorkflow })
+         body: JSON.stringify({ workflow: n8nWorkflow,
+          googleAccessToken: session?.accessToken,       // ← pass it here
+          googleRefreshToken: session?.refreshToken })
        });
 
        if (!response.ok) throw new Error('Deployment failed');
